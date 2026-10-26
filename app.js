@@ -3,9 +3,7 @@
 // =========================================================================
 
 const STORAGE_KEY_V2 = "medipiso_hospital_state_v2";
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6Yr7z3sV_AJM34IqioTT7fDHbVgoPGp2HVK5FF1kslQT6e3rXl8sXXIfUYQCSusel/exec";
-let userSignature = localStorage.getItem("medipiso_firma") || "Dr(a). / Int. ";
-
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4dapcLoxurZcgoDjActssH5jnOfCOLfTcc-qeiT56nTjMU3sZw64BDX2nD4q5_-Jn/exec";let userSignature = localStorage.getItem("medipiso_firma") || "Dr(a). / Int. ";
 let appState = null;
 let currentEditingRef = null; // { serviceId, roomId, bedId }
 let currentShareRef = null;   // { serviceId, roomId, bedId }
