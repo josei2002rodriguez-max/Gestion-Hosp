@@ -3,6 +3,8 @@
 // =========================================================================
 
 const STORAGE_KEY_V2 = "medipiso_hospital_state_v2";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6Yr7z3sV_AJM34IqioTT7fDHbVgoPGp2HVK5FF1kslQT6e3rXl8sXXIfUYQCSusel/exec";
+let userSignature = localStorage.getItem("medipiso_firma") || "Dr(a). / Int. ";
 
 let appState = null;
 let currentEditingRef = null; // { serviceId, roomId, bedId }
@@ -2426,4 +2428,68 @@ window.onload = function () {
 
   // Revisar alertas horarias cada 30 segundos
   setInterval(evaluateNotificationsAndBell, 30000);
+  async function sendPatientToDocsFromModal() {
+  if (!currentEditingRef) return;
+  
+  // 1. Guardar cambios en el celular primero
+  saveBedModal(); 
+  
+  const found = findEntity(currentEditingRef.serviceId, currentEditingRef.roomId, currentEditingRef.bedId);
+  if (!found || !found.bed || !found.bed.patient) return;
+  const p = found.bed.patient;
+
+  // 2. Pedir la firma (recuerda la última que usaste para no escribirla siempre)
+  const firma = prompt("Firma responsable de la evolución (Ej: Int. Juan Pérez):", userSignature);
+  if (firma === null) return; // Si presionas cancelar, no envía
+  userSignature = firma;
+  localStorage.setItem("medipiso_firma", firma);
+
+  // 3. Formatear la carta para Google Docs
+  const atbTxt = p.antibiotics && p.antibiotics.length
+    ? p.antibiotics.map(a => `${a.name} (${a.dose}) D${a.currentDay}/${a.targetDays}`).join(" | ")
+    : "";
+
+  const dispTxt = p.devices && p.devices.length
+    ? p.devices.map(d => `${d.name} D${d.days}`).join(" | ")
+    : "";
+
+  const pendTxt = p.tasks && p.tasks.filter(t => !t.completed).length
+    ? p.tasks.filter(t => !t.completed).map(t => `- [${t.category}] ${t.text}`).join("\n")
+    : "Sin pendientes activos";
+
+  const payload = {
+    camaCode: found.bed.code,
+    servicio: found.service.name,
+    paciente: p.name || "Sin nombre",
+    edad: p.age || "-",
+    rut: p.rut || "-",
+    diasHosp: p.hospDays || 1,
+    aislamiento: getIsolationMeta(p.isolationType).label,
+    diagnosticos: p.diagnoses || "Sin diagnósticos",
+    plan: (p.clinicalPlan || "Sin plan redactado") + "\n\nFIRMA: " + firma,
+    labs: p.labsSummary || "-",
+    atb: atbTxt,
+    dispositivos: dispTxt,
+    pendientes: pendTxt
+  };
+
+  showToast("☁️ Conectando con Google Docs...", "info");
+
+  // 4. Disparar al Buzón de Google
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    
+    if (result.status === "success") {
+      showToast(`✅ Evolución de ${found.bed.code} guardada en el documento del servicio`, "success");
+    } else {
+      showToast("❌ Error al guardar en Docs: " + result.message, "danger");
+    }
+  } catch (error) {
+    showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
+  }
+}
 };
