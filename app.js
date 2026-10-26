@@ -2433,6 +2433,9 @@ window.onload = function () {
 // =========================================================================
 // 15. CONEXIÓN A GOOGLE DOCS (API REST)
 // =========================================================================
+// =========================================================================
+// 15. CONEXIÓN A GOOGLE DOCS (API REST - DINÁMICO)
+// =========================================================================
 async function sendPatientToDocsFromModal() {
   if (!currentEditingRef) return;
   
@@ -2443,13 +2446,32 @@ async function sendPatientToDocsFromModal() {
   if (!found || !found.bed || !found.bed.patient) return;
   const p = found.bed.patient;
 
-  // 2. Pedir la firma (recuerda la última que usaste para no escribirla siempre)
-  const firma = prompt("Firma responsable de la evolución (Ej: Int. Juan Pérez):", userSignature);
-  if (firma === null) return; // Si presionas cancelar, no envía
+  // 2. SOLICITAR EL DOCUMENTO DINÁMICO (Se guarda en el celular)
+  let targetDocId = localStorage.getItem("medipiso_doc_id");
+  if (!targetDocId) {
+    let docLink = prompt("Primera configuración:\nPega aquí el enlace de tu documento de Google Docs (el que ya usas para tus evoluciones):");
+    if (!docLink) return;
+    
+    // Extraer automáticamente el ID si pegas el link completo
+    let match = docLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    targetDocId = match ? match[1] : docLink.trim();
+    localStorage.setItem("medipiso_doc_id", targetDocId);
+  }
+
+  // 3. PEDIR LA FIRMA (O CAMBIAR DOCUMENTO)
+  const firma = prompt("Firma responsable (Ej: Int. Pérez)\n\n*Para configurar otro documento, escribe: CAMBIAR DOC", userSignature);
+  if (firma === null) return; 
+  
+  if (firma === "CAMBIAR DOC") {
+    localStorage.removeItem("medipiso_doc_id");
+    showToast("Enlace borrado. Vuelve a presionar 'Enviar a Docs' para vincular uno nuevo.", "info");
+    return;
+  }
+  
   userSignature = firma;
   localStorage.setItem("medipiso_firma", firma);
 
-  // 3. Formatear la carta para Google Docs
+  // 4. FORMATEAR DATOS CLÍNICOS
   const atbTxt = p.antibiotics && p.antibiotics.length
     ? p.antibiotics.map(a => `${a.name} (${a.dose}) D${a.currentDay}/${a.targetDays}`).join(" | ")
     : "";
@@ -2462,7 +2484,9 @@ async function sendPatientToDocsFromModal() {
     ? p.tasks.filter(t => !t.completed).map(t => `- [${t.category}] ${t.text}`).join("\n")
     : "Sin pendientes activos";
 
+  // 5. PREPARAR PAQUETE INCLUYENDO EL DOC_ID
   const payload = {
+    docId: targetDocId,
     camaCode: found.bed.code,
     servicio: found.service.name,
     paciente: p.name || "Sin nombre",
@@ -2480,7 +2504,7 @@ async function sendPatientToDocsFromModal() {
 
   showToast("☁️ Conectando con Google Docs...", "info");
 
-  // 4. Disparar al Buzón de Google
+  // 6. DISPARAR AL BUZÓN
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
@@ -2489,9 +2513,10 @@ async function sendPatientToDocsFromModal() {
     const result = await response.json();
     
     if (result.status === "success") {
-      showToast(`✅ Evolución de ${found.bed.code} guardada en el documento del servicio`, "success");
+      showToast(`✅ Evolución de ${found.bed.code} guardada en el documento`, "success");
     } else {
-      showToast("❌ Error al guardar en Docs: " + result.message, "danger");
+      showToast("❌ Error al guardar: Comprueba que el enlace de Google Docs es correcto y tiene permisos de edición.", "danger");
+      localStorage.removeItem("medipiso_doc_id"); // Borra el ID si está defectuoso
     }
   } catch (error) {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
