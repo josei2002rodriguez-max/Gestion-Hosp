@@ -1,6 +1,40 @@
 // =========================================================================
-// MEDIPISO v2.0 — CATÁLOGO MICROBIOLÓGICO (200 PATÓGENOS) Y DATOS BASE
+// MEDIPISO v3.0 — CATÁLOGOS CLÍNICOS Y DATOS BASE
 // =========================================================================
+
+const CATALOGO_DIAGNOSTICOS = [
+  "Apendicitis aguda", "Colelitiasis", "Colecistitis aguda", "Hernia inguinal no complicada", "Hernia inguinal atascada", 
+  "Hernia umbilical", "Hernia incisional / Eventración", "Obstrucción intestinal", "Íleo paralítico", "Peritonitis", 
+  "Úlcera péptica perforada", "Trauma abdominal", "Hemorragia digestiva alta (HDA)", "Hemorragia digestiva baja (HDB)", 
+  "Diverticulitis aguda", "Cáncer gástrico", "Cáncer de colon", "Cáncer de recto", "Tumor carcinoide", "Vólvulo de sigmoides", 
+  "Isquemia mesentérica", "Absceso hepático", "Quiste hidatídico", "Pancreatitis aguda", "Pie diabético", "Úlcera venosa", 
+  "Úlcera arterial", "TVP", "TEP", "Infección del sitio quirúrgico (ISQ)", "Seroma postoperatorio", "Hematoma postoperatorio", 
+  "Dehiscencia de sutura", "Fístula enterocutánea", "Retención aguda de orina (RAO)", "ITU", "Neumonía (NAC / NIH)", "Sepsis", 
+  "Shock séptico", "Lesión renal aguda (LRA)", "Anemia aguda postoperatoria", "Hipokalemia", "Hipernatremia", 
+  "Delirium / Síndrome confusional agudo", "Fibrilación auricular", "Derrame pleural", "Neumotórax", "Hemotórax", "Fractura de cadera"
+];
+
+const CATALOGO_FARMACOS = [
+  "Losartán", "Enalapril", "Captopril", "Valsartán", "Amlodipino", "Nifedipino", "Atenolol", "Carvedilol", "Bisoprolol", 
+  "Propranolol", "Furosemida", "Hidroclorotiazida", "Espironolactona", "Aspirina", "Clopidogrel", "Acenocumarol", "Warfarina", 
+  "Rivaroxabán", "Apixabán", "Dabigatrán", "Heparina", "Enoxaparina", "Metformina", "Insulina Glargina", "Insulina NPH", 
+  "Insulina Cristalina", "Insulina Lispro", "Glibenclamida", "Empagliflozina", "Dapagliflozina", "Sitagliptina", "Vildagliptina", 
+  "Linagliptina", "Levotiroxina", "Atorvastatina", "Rosuvastatina", "Gemfibrozilo", "Fenofibrato", "Ezetimiba", "Omeprazol", 
+  "Pantoprazol", "Lansoprazol", "Esomeprazol", "Famotidina", "Domperidona", "Metoclopramida", "Ondansetrón", "Lactulosa", 
+  "PEG (Polietilenglicol)", "Loperamida", "Paracetamol", "Ibuprofeno", "Ketoprofeno", "Naproxeno", "Diclofenaco", "Ketorolaco", 
+  "Celecoxib", "Etoricoxib", "Meloxicam", "Piroxicam", "Tramadol", "Buprenorfina", "Morfina", "Fentanilo", "Metadona", 
+  "Pregabalina", "Gabapentina", "Amitriptilina", "Duloxetina", "Venlafaxina", "Sertralina", "Escitalopram", "Citalopram", 
+  "Fluoxetina", "Paroxetina", "Mirtazapina", "Clonazepam", "Alprazolam", "Diazepam", "Lorazepam", "Zolpidem", "Zopiclona", 
+  "Quetiapina", "Risperidona", "Olanzapina", "Haloperidol", "Ácido Valproico", "Levetiracetam", "Carbamazepina", "Fenitoína", 
+  "Lamotrigina", "Topiramato", "Alopurinol", "Colchicina", "Prednisona", "Hidrocortisona", "Dexametasona", "Betametasona", 
+  "Fluticasona", "Budesonida", "Salbutamol", "Salmeterol", "Formoterol", "Ipratropio", "Tiotropio", "Montelukast", "Loratadina", 
+  "Desloratadina", "Cetirizina", "Levocetirizina", "Clorfenamina", "Amoxicilina", "Amoxicilina/Ác. Clavulánico", "Ampicilina", 
+  "Cloxacilina", "Flucloxacilina", "Penicilina", "Cefadroxilo", "Cefazolina", "Ceftriaxona", "Cefotaxima", "Cefepime", "Meropenem", 
+  "Ertapenem", "Imipenem", "Azitromicina", "Claritromicina", "Eritromicina", "Ciprofloxacino", "Levofloxacino", "Moxifloxacino", 
+  "Gentamicina", "Amikacina", "Clindamicina", "Metronidazol", "Vancomicina", "Linezolid", "Cotrimoxazol", "Nitrofurantoína", 
+  "Fluconazol", "Clotrimazol", "Nistatina", "Aciclovir", "Valaciclovir", "Oseltamivir", "Tamsulosina", "Dutasterida", "Finasterida", 
+  "Sildenafil", "Tadalafilo", "Alendronato", "Ibandronato", "Calcio", "Vitamina D", "Fierro", "Ácido Fólico", "Vitamina B12"
+];
 
 const HOSPITAL_PATHOGENS_DB = [
   // --- ENTEROBACTERALES GRAM NEGATIVOS Y FENOTIPOS MDR (1 - 55) ---
@@ -245,8 +279,8 @@ function createEmptyPatient() {
     isolationType: "none",
     pathogens: [],
     antibiotics: [],
-    devices: [], // [{ id, name: 'VVP', days: 1 }]
-    tasks: []    // [{ id, category, text, timing, daysRemaining, dueTime, completed, notified }]
+    devices: [], 
+    tasks: []    
   };
 }
 
@@ -422,7 +456,7 @@ function generateDefaultHospitalState() {
   const srvTrauma = buildServiceWithCorrelativeRooms("srv-trauma", "Traumatología", "🦴", "cyan", 1, [4, 4, 4]);
 
   return {
-    version: "2.0",
+    version: "3.0",
     hospitalName: "Hospital San Fernando",
     myServiceId: "srv-cirugia",
     activeTab: "floor",
