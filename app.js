@@ -2412,10 +2412,10 @@ window.onload = function () {
     document.documentElement.classList.add("dark");
   }
 
-  // Poblar datalist de antibióticos comunes
+  // Cargar tus catálogos masivos de Sidebar.html para autocompletado
   const atbDatalist = document.getElementById("commonAtbList");
-  if (atbDatalist && typeof COMMON_ATB_LIST !== "undefined") {
-    atbDatalist.innerHTML = COMMON_ATB_LIST.map(a => `<option value="${escapeHtml(a)}"></option>`).join("");
+  if (atbDatalist && typeof CATALOGO_FARMACOS !== "undefined") {
+    atbDatalist.innerHTML = CATALOGO_FARMACOS.map(a => `<option value="${escapeHtml(a)}"></option>`).join("");
   }
 
   // Registrar Service Worker para PWA instalable y offline
@@ -2428,7 +2428,12 @@ window.onload = function () {
 
   // Revisar alertas horarias cada 30 segundos
   setInterval(evaluateNotificationsAndBell, 30000);
-  async function sendPatientToDocsFromModal() {
+};
+
+// =========================================================================
+// 15. CONEXIÓN A GOOGLE DOCS (API REST)
+// =========================================================================
+async function sendPatientToDocsFromModal() {
   if (!currentEditingRef) return;
   
   // 1. Guardar cambios en el celular primero
@@ -2492,4 +2497,3 @@ window.onload = function () {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
   }
 }
-};
