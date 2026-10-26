@@ -2452,8 +2452,9 @@ async function sendPatientToDocsFromModal() {
     localStorage.setItem("medipiso_doc_id", targetDocId);
   }
 
-  // 3. Pedir firma
-  const firma = prompt("Firma responsable (Ej: Int. Pérez)\n\n*Para configurar otro documento, escribe: CAMBIAR DOC", userSignature);
+  // 3. Pedir firma (¡AQUÍ ESTABA EL ERROR ARREGLADO!)
+  let savedFirma = localStorage.getItem("medipiso_firma") || "";
+  const firma = prompt("Firma responsable (Ej: Int. Pérez)\n\n*Para configurar otro documento, escribe: CAMBIAR DOC", savedFirma);
   if (firma === null) return; 
   
   if (firma === "CAMBIAR DOC") {
@@ -2462,7 +2463,6 @@ async function sendPatientToDocsFromModal() {
     return;
   }
   
-  userSignature = firma;
   localStorage.setItem("medipiso_firma", firma);
 
   // 4. Formatear datos
@@ -2508,7 +2508,6 @@ async function sendPatientToDocsFromModal() {
     if (result.status === "success") {
       showToast(`✅ Evolución guardada en el documento`, "success");
     } else {
-      // AQUÍ NOS MOSTRARÁ EL ERROR EXACTO QUE MANDA GOOGLE
       showToast("❌ Error Google: " + result.message, "danger");
     }
   } catch (error) {
