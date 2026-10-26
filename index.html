@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0d9488" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MediPiso" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>MediPiso 2.0 — Gestión de Servicios, Salas y Pase de Visita</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.7); }
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { background: white !important; color: black !important; }
+    }
+    .card-hover {
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col selection:bg-teal-500 selection:text-white">
+
+  <!-- =========================================================================
+       TOP NAVIGATION BAR
+  ========================================================================== -->
+  <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm no-print">
+    <div class="max-w-[1600px] mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand + Hospital Title + Selector de Mi Servicio -->
+      <div class="flex items-center gap-3">
+        <div onclick="navigateHierarchy('services')" class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20 shrink-0 cursor-pointer" title="Ir a vista general de Servicios">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 id="headerHospitalName" onclick="openHospitalConfigModal()" class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white cursor-pointer hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1.5" title="Configurar Hospital y Servicios">
+              <span>Hospital San Fernando</span>
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </h1>
+
+            <!-- Selector rápido de "Mi Servicio" -->
+            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+              <span>🏥 Mi Servicio:</span>
+              <select id="headerMyServiceSelect" onchange="changeMyService(this.value)" class="bg-transparent font-extrabold focus:outline-none cursor-pointer"></select>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+            <span id="currentDateLabel">Pase de Visita</span>
+            <span>•</span>
+            <span id="globalRoundProgressText" class="font-semibold text-teal-600 dark:text-teal-400">0/0 mis camas vistas hoy</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick KPI Counters -->
+      <div class="hidden xl:flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 text-xs">
+        <div class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span class="text-slate-500 dark:text-slate-400">Ocupación Total:</span>
+          <strong id="kpiOccupied" class="text-slate-900 dark:text-white font-bold">0/0</strong>
+        </div>
+        <div class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+          <span class="text-slate-500 dark:text-slate-400">Mis Camas:</span>
+          <strong id="kpiMyBeds" class="text-indigo-600 dark:text-indigo-400 font-bold">0</strong>
+        </div>
+        <div class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span class="text-slate-500 dark:text-slate-400">Aislamientos:</span>
+          <strong id="kpiIsolated" class="text-amber-600 dark:text-amber-400 font-bold">0</strong>
+        </div>
+        <div class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          <span class="text-slate-500 dark:text-slate-400">Pendientes:</span>
+          <strong id="kpiPendingTasks" class="text-rose-600 dark:text-rose-400 font-bold">0</strong>
+        </div>
+      </div>
+
+      <!-- Top Action Buttons + Notifications + PWA Install -->
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        
+        <!-- PWA Install Button (se muestra automáticamente cuando es instalable) -->
+        <button id="pwaInstallBtn" onclick="installPWA()" class="hidden px-2.5 py-2 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center gap-1.5 transition">
+          <span>📲 Instalar App</span>
+        </button>
+
+        <!-- Notification Bell Dropdown -->
+        <div class="relative">
+          <button onclick="toggleNotificationDrawer()" class="relative p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition" title="Alertas y Notificaciones de Pendientes / ATB">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <span id="notifBellBadge" class="hidden absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-rose-600 text-white shadow">0</span>
+          </button>
+
+          <!-- Notification Drawer Popover -->
+          <div id="notificationDrawer" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden">
+            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider">🔔 Alertas y Recordatorios</span>
+              <button onclick="requestBrowserNotificationPermission()" id="enableBrowserNotifBtn" class="text-[11px] px-2 py-0.5 rounded bg-teal-600 hover:bg-teal-500 font-semibold">
+                Activar avisos del sistema
+              </button>
+            </div>
+            <div id="notificationListContainer" class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1"></div>
+          </div>
+        </div>
+
+        <button onclick="openNewDayModal()" class="px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/70 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80 flex items-center gap-1.5 transition" title="Avanzar +1 día de hospitalización, ATB y dispositivos">
+          <span>☀️ Nuevo Día</span>
+        </button>
+
+        <button onclick="openImportPatientModal()" class="px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1.5 transition" title="Importar paciente desde archivo .md o WhatsApp">
+          <span>📥 Importar (.md / WSP)</span>
+        </button>
+
+        <button onclick="openHospitalConfigModal()" class="px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white shadow-sm flex items-center gap-1.5 transition" title="Crear o editar Servicios (Cirugía, UTI, UCI...) y Salas">
+          <span>🏥 Servicios y Salas</span>
+        </button>
+
+        <button onclick="toggleDarkMode()" class="p-2 rounded-xl text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition" title="Cambiar modo claro/oscuro">
+          <svg class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <svg class="w-4 h-4 block dark:hidden text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN TABS + SEARCH / FILTER BAR -->
+    <div class="bg-slate-50/90 dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800/80">
+      <div class="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+        
+        <!-- Navigation Tabs -->
+        <div class="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+          <button onclick="switchMainTab('floor')" id="tabBtn-floor" class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+            <span>🗺️ Mapa por Servicios y Salas</span>
+            <span id="badgeCountFloor" class="px-1.5 py-0.5 text-[11px] rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200">0</span>
+          </button>
+
+          <button onclick="switchMainTab('mybeds')" id="tabBtn-mybeds" class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+            <span>⭐ Mis Camas (Mi Visita)</span>
+            <span id="badgeCountMyBeds" class="px-1.5 py-0.5 text-[11px] rounded-full bg-indigo-100 dark:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300">0</span>
+          </button>
+
+          <button onclick="switchMainTab('tasks')" id="tabBtn-tasks" class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+            <span>📌 Central de Pendientes</span>
+            <span id="badgeCountTasks" class="px-1.5 py-0.5 text-[11px] rounded-full bg-rose-100 dark:bg-rose-900/70 text-rose-700 dark:text-rose-300">0</span>
+          </button>
+
+          <button onclick="switchMainTab('summary')" id="tabBtn-summary" class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+            <span>📋 Resumen y Entrega</span>
+          </button>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative flex-1 sm:w-64">
+            <input
+              id="globalSearchInput"
+              type="text"
+              oninput="handleSearchInput(this.value)"
+              placeholder="Buscar paciente, RUT, cama, bacteria, ATB..."
+              class="w-full pl-3 pr-7 py-1.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+          </div>
+
+          <select id="floorQuickFilter" onchange="setFloorFilter(this.value)" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <option value="all">Todas las camas</option>
+            <option value="mine">⭐ Solo Mis Camas</option>
+            <option value="unseen">👁️ Pendientes de ver hoy</option>
+            <option value="seen">✅ Ya vistas hoy</option>
+            <option value="my_service">🏥 De Mi Servicio</option>
+            <option value="other_service">🔄 Ectópicos / Otro Servicio</option>
+            <option value="isolated">⚠️ Con Aislamiento</option>
+            <option value="with_tasks">📌 Con Pendientes Activos</option>
+            <option value="free">🟢 Camas Libres</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MAIN WORKSPACE CONTAINER
+  ========================================================================== -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-6 py-5">
+
+    <!-- ==========================================
+         VIEW 1: MAPA JERÁRQUICO (SERVICIOS -> SALAS -> CAMAS)
+    =========================================== -->
+    <section id="view-floor" class="space-y-5">
+      
+      <!-- Hierarchical Breadcrumb & Level Controls Bar -->
+      <div class="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <!-- Breadcrumb Path -->
+        <div id="hierarchyBreadcrumbs" class="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm font-bold"></div>
+
+        <!-- Level contextual buttons -->
+        <div id="hierarchyContextActions" class="flex flex-wrap items-center gap-2"></div>
+      </div>
+
+      <!-- Quick Filter Chips Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <span class="font-semibold text-slate-500 dark:text-slate-400 mr-1">Filtro rápido:</span>
+          <button onclick="setFloorFilter('all')" data-filter-chip="all" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">Todas</button>
+          <button onclick="setFloorFilter('mine')" data-filter-chip="mine" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">⭐ Mis Camas</button>
+          <button onclick="setFloorFilter('unseen')" data-filter-chip="unseen" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">👁️ Faltan por ver</button>
+          <button onclick="setFloorFilter('my_service')" data-filter-chip="my_service" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">🏥 Mi Servicio</button>
+          <button onclick="setFloorFilter('other_service')" data-filter-chip="other_service" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">🔄 Ectópicos</button>
+          <button onclick="setFloorFilter('isolated')" data-filter-chip="isolated" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">⚠️ Aislamientos</button>
+          <button onclick="setFloorFilter('free')" data-filter-chip="free" class="filter-chip px-2.5 py-1 rounded-lg font-medium transition">🟢 Libres</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>Contacto</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>Gotitas</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>Aéreo</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Protector</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Hierarchical Container (Services Grid OR Rooms Grid OR Beds Grid) -->
+      <div id="hierarchyContentContainer" class="space-y-6"></div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 2: MIS CAMAS (MI PASE DE VISITA)
+    =========================================== -->
+    <section id="view-mybeds" class="hidden space-y-5">
+      <div class="bg-gradient-to-r from-indigo-600 via-teal-600 to-cyan-600 rounded-2xl p-4 sm:p-6 text-white shadow-lg">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 backdrop-blur">
+              ⭐ Mi Pase de Visita Diario (Todos los Servicios)
+            </span>
+            <h2 class="text-xl sm:text-2xl font-bold mt-1">Mis Camas Asignadas</h2>
+            <p class="text-xs sm:text-sm text-white/85 mt-0.5">
+              Reúne todas tus camas marcadas con ★ sin importar en qué Servicio o Sala del hospital se encuentren.
+            </p>
+          </div>
+          <div class="bg-white/15 backdrop-blur rounded-2xl p-3.5 min-w-[250px] border border-white/20">
+            <div class="flex items-center justify-between text-xs font-semibold mb-1.5">
+              <span>Progreso de Visita Hoy</span>
+              <span id="myBedsProgressFraction">0 / 0 vistos</span>
+            </div>
+            <div class="w-full h-2.5 bg-black/25 rounded-full overflow-hidden">
+              <div id="myBedsProgressBar" class="h-full bg-emerald-300 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between mt-2.5 text-[11px] text-white/90">
+              <button onclick="markAllMyBedsSeen(true)" class="underline hover:text-white">Marcar todas vistas</button>
+              <button onclick="markAllMyBedsSeen(false)" class="underline hover:text-white">Desmarcar todas</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="myBedsContainer" class="space-y-6"></div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 3: CENTRAL DE PENDIENTES Y RECORDATORIOS
+    =========================================== -->
+    <section id="view-tasks" class="hidden space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 inline-flex items-center justify-center">📌</span>
+              <span>Asignar Pendiente o Recordatorio con Alerta</span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Puedes programar pendientes para hoy con hora de notificación (ej: 14:30) o en X días (ej: pedir Rx en 5 días).
+            </p>
+          </div>
+        </div>
+
+        <form onsubmit="handleQuickTaskSubmit(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Servicio / Cama / Paciente</label>
+            <select id="quickTaskBedSelect" required class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Categoría</label>
+            <select id="quickTaskCategory" class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <option value="Reevaluar">🔄 Reevaluar</option>
+              <option value="Imágenes">🩻 Imágenes / Rx / TAC</option>
+              <option value="Laboratorio">🧪 Laboratorio / Cultivos</option>
+              <option value="Interconsulta">👨‍⚕️ Interconsulta (IC)</option>
+              <option value="Procedimiento">💉 Procedimiento / Curación</option>
+              <option value="Alta/Trámite">📋 Trámite / Receta / Alta</option>
+            </select>
+          </div>
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Descripción del pendiente</label>
+            <input id="quickTaskText" type="text" required placeholder="Ej: Rescatar cultivo, pedir Rx tórax, IC..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Plazo</label>
+            <div class="flex items-center gap-1">
+              <select id="quickTaskTimingType" onchange="toggleQuickTaskDaysInput()" class="w-full px-2 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <option value="today">Hoy (Urgente)</option>
+                <option value="later">Más tarde hoy</option>
+                <option value="tomorrow">Mañana (1 día)</option>
+                <option value="in_days">En X días...</option>
+              </select>
+              <input id="quickTaskDaysNumber" type="number" min="1" max="90" value="5" class="hidden w-14 px-2 py-2 rounded-xl text-xs text-center font-bold bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700" title="Días" />
+            </div>
+          </div>
+          <div class="sm:col-span-1">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">🔔 Hora</label>
+            <input id="quickTaskDueTime" type="time" class="w-full px-2 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" title="Hora opcional para recibir notificación" />
+          </div>
+          <div class="sm:col-span-1">
+            <button type="submit" class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition">
+              + Crear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button onclick="setTasksScope('all')" id="tasksScopeAll" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-teal-600 text-white">Todos los pendientes</button>
+          <button onclick="setTasksScope('mine')" id="tasksScopeMine" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">⭐ Solo de Mis Camas</button>
+        </div>
+        <button onclick="clearCompletedTasks()" class="text-xs text-slate-500 hover:text-rose-600 font-medium">
+          🗑️ Limpiar completados
+        </button>
+      </div>
+
+      <div id="centralTasksContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-5"></div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 4: RESUMEN CLÍNICO Y ENTREGA DE GUARDIA
+    =========================================== -->
+    <section id="view-summary" class="hidden space-y-5">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-3 no-print">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Resumen de Pacientes y Pase de Guardia</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Filtra por tus camas, por un servicio específico o imprime la sábana de visita.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="summaryFilterSelect" onchange="renderSummaryView()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <option value="mine">⭐ Solo Mis Camas</option>
+            <option value="my_service">🏥 Todo Mi Servicio</option>
+            <option value="all">📋 Todos los Servicios ocupados</option>
+            <option value="isolated">⚠️ Solo pacientes con aislamiento</option>
+          </select>
+          <button onclick="copySummaryToWhatsApp()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm">
+            <span>📲 Copiar Entrega para WhatsApp</span>
+          </button>
+          <button onclick="window.print()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-1.5">
+            <span>🖨️ Imprimir Hoja de Visita</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="summaryTableContainer" class="space-y-4"></div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       MODAL 1: FICHA COMPLETA DE CAMA Y PACIENTE (v2.0)
+  ========================================================================== -->
+  <div id="bedModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[94vh] flex flex-col">
+      
+      <!-- Modal Top Header -->
+      <div class="px-4 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-3">
+          <span id="modalBedCodeBadge" class="px-3 py-1.5 rounded-xl text-sm font-extrabold bg-teal-600 text-white shadow-xs">Cama 1</span>
+          <div>
+            <h3 id="modalRoomTitle" class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Cirugía — Sala 1</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Ficha clínica, aislamiento, dispositivos, ATB y pendientes</p>
+          </div>
+        </div>
+
+        <!-- Quick Actions inside Modal Header (INCLUYE MOVER CAMA) -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button type="button" onclick="openMovePatientModalFromCurrentBed()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1 shadow-xs transition" title="Cambiar al paciente de cama o trasladar a otro servicio/sala">
+            <span>⇄ Mover / Trasladar Cama</span>
+          </button>
+
+          <button type="button" onclick="openSharePatientModalFromCurrentBed()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-xs transition">
+            <span>📲 Compartir (.md / WSP)</span>
+          </button>
+
+          <button type="button" onclick="vacateCurrentBed()" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition">
+            Alta / Liberar
+          </button>
+
+          <button type="button" onclick="closeBedModal()" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">✕</button>
+        </div>
+      </div>
+
+      <!-- Modal Scrollable Body -->
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        
+        <!-- ROW 1: ESTADO DE LA CAMA, SERVICIO TRATANTE, MI CAMA, VISTO HOY -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+          <div class="md:col-span-3">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Etiqueta de Cama</label>
+            <input id="fieldBedCode" type="text" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+          </div>
+
+          <div class="md:col-span-3">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Estado de Cama</label>
+            <select id="fieldBedStatus" class="w-full px-3 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <option value="occupied">🔴 Ocupada con Paciente</option>
+              <option value="free">🟢 Libre / Disponible</option>
+              <option value="reserved">🟡 En Reserva / Asignada</option>
+              <option value="cleaning">🔵 En Aseo Terminal</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-6">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Servicio Tratante del Paciente (Detecta Ectópicos automáticamente)</label>
+            <select id="fieldPatientServiceId" class="w-full px-3 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></select>
+          </div>
+
+          <div class="md:col-span-12 flex flex-wrap items-center gap-3 pt-1">
+            <label class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 cursor-pointer select-none">
+              <input id="fieldIsMyBed" type="checkbox" class="w-4 h-4 rounded text-indigo-600" />
+              <span class="text-xs sm:text-sm font-bold text-indigo-800 dark:text-indigo-200">⭐ Es Mi Paciente / Mi Cama</span>
+            </label>
+
+            <label class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 cursor-pointer select-none">
+              <input id="fieldSeenToday" type="checkbox" class="w-4 h-4 rounded text-emerald-600" />
+              <span class="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-200">✅ Evaluado / Visto hoy</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ROW 2: ALERTAS CLÍNICAS RÁPIDAS (ALERGIAS, LET, SOPORTE O2) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-rose-50/50 dark:bg-rose-950/20 p-3.5 rounded-2xl border border-rose-200/80 dark:border-rose-800/60">
+          <div>
+            <label class="block text-xs font-extrabold text-rose-700 dark:text-rose-300 mb-1">🚨 Alergias (RAM)</label>
+            <input id="fieldPatientAllergies" type="text" placeholder="Ej: No conocidas / Penicilina / AINEs..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700" />
+          </div>
+          <div>
+            <label class="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">⚖️ Techo Terapéutico / LET</label>
+            <select id="fieldPatientLet" class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
+              <option value="Full / Sin restricción">🟢 Full / Sin restricción</option>
+              <option value="LET: No RCP / No IOT">🔴 LET: No RCP / No IOT</option>
+              <option value="LET: No ingreso a UCI">🟠 LET: No ingreso a UCI</option>
+              <option value="Cuidados Fin de Vida / Confort">🟣 Cuidados Fin de Vida / Confort</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-extrabold text-sky-700 dark:text-sky-300 mb-1">🫁 Soporte Ventilatorio / O₂</label>
+            <input id="fieldPatientOxygen" type="text" placeholder="Ej: Ambiental, Naricera 2L, CNAF, VMI..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-sky-300 dark:border-sky-700" />
+          </div>
+        </div>
+
+        <!-- ROW 3: AISLAMIENTO Y MICROORGANISMO (200 PATÓGENOS) -->
+        <div class="bg-amber-50/70 dark:bg-amber-950/20 rounded-2xl p-4 border border-amber-200/90 dark:border-amber-800/60 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+              ⚠️ Precauciones de Aislamiento y Microbiología (200 Patógenos)
+            </h4>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <div class="md:col-span-4">
+              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tipo de Aislamiento</label>
+              <select id="fieldIsolationType" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700">
+                <option value="none">Sin Aislamiento (Estándar)</option>
+                <option value="contacto">🟡 Aislamiento de Contacto</option>
+                <option value="gotitas">🔵 Aislamiento de Gotitas</option>
+                <option value="aereo">🟣 Aislamiento Aéreo (Respiratorio)</option>
+                <option value="contacto_gotitas">🟠 Contacto + Gotitas</option>
+                <option value="contacto_aereo">🩷 Contacto + Aéreo</option>
+                <option value="protector">🟢 Aislamiento Protector</option>
+              </select>
+            </div>
+
+            <div class="md:col-span-8 relative">
+              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Bacteria, Virus u Hongo (Autocompletado con sugerencia de aislamiento)
+              </label>
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <input
+                    id="pathogenSearchInput"
+                    type="text"
+                    autocomplete="off"
+                    oninput="handlePathogenAutocomplete(this.value)"
+                    onfocus="handlePathogenAutocomplete(this.value)"
+                    placeholder="Busca KPC, BLEE, SAMR, Pseudomonas, C. difficile, Influenza..."
+                    class="w-full px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700"
+                  />
+                  <div id="pathogenDropdown" class="hidden absolute left-0 right-0 top-full mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-40 divide-y divide-slate-100 dark:divide-slate-800"></div>
+                </div>
+                <button type="button" onclick="addCustomPathogenFromInput()" class="px-3 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0">
+                  + Agente
+                </button>
+              </div>
+              <div id="selectedPathogensContainer" class="flex flex-wrap gap-1.5 mt-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 4: IDENTIFICACIÓN DEMOGRÁFICA -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
+          <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            👤 Datos de Identificación del Paciente
+          </h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3">
+            <div class="md:col-span-5">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nombre Completo</label>
+              <input id="fieldPatientName" type="text" placeholder="Ej: María Elena González Soto" class="w-full px-3 py-2 rounded-xl text-sm font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="md:col-span-3">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">RUT / Documento</label>
+              <input id="fieldPatientRut" type="text" oninput="formatRutInput(this)" placeholder="12.345.678-9" class="w-full px-3 py-2 rounded-xl text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">F. Nacimiento</label>
+              <input id="fieldPatientDob" type="date" onchange="calculateAgeFromDob()" class="w-full px-2.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Edad (años)</label>
+              <input id="fieldPatientAge" type="number" min="0" max="130" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="md:col-span-3">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">N° de Ficha</label>
+              <input id="fieldPatientRecordNumber" type="text" class="w-full px-3 py-2 rounded-xl text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="md:col-span-4">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Teléfono / Familiar</label>
+              <input id="fieldPatientPhone" type="text" class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="md:col-span-5">
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Comuna / Dirección / Red de Apoyo</label>
+              <input id="fieldPatientAddress" type="text" class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 5: HOSPITALIZACIÓN, DIAGNÓSTICOS, EVOLUCIÓN Y LABORATORIOS -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-400">
+              🩺 Hospitalización, Diagnósticos, Plan y Laboratorios
+            </h4>
+            <div class="flex items-center gap-3 bg-teal-50 dark:bg-teal-950/60 px-3 py-1.5 rounded-xl border border-teal-200 dark:border-teal-800">
+              <div class="flex items-center gap-1.5">
+                <label class="text-xs font-semibold text-teal-800 dark:text-teal-300">Ingreso:</label>
+                <input id="fieldAdmissionDate" type="date" onchange="calculateHospDaysFromDate()" class="px-2 py-0.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-teal-300 dark:border-teal-700" />
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-teal-900 dark:text-teal-200">Días Hosp:</span>
+                <button type="button" onclick="adjustHospDays(-1)" class="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 border border-teal-300 font-bold text-xs">-</button>
+                <input id="fieldHospDays" type="number" min="0" max="999" value="1" class="w-14 text-center py-0.5 rounded-lg text-xs font-extrabold bg-white dark:bg-slate-900 border border-teal-300" />
+                <button type="button" onclick="adjustHospDays(1)" class="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 border border-teal-300 font-bold text-xs">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Diagnósticos Activos</label>
+              <textarea id="fieldDiagnoses" rows="4" placeholder="1. Diagnóstico principal&#10;2. Comorbilidades..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Plan Clínico / Evolución</label>
+              <textarea id="fieldClinicalPlan" rows="4" placeholder="Evolución del día, balance hídrico, conducta quirúrgica o médica..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">🧪 Laboratorios / Cultivos Clave</label>
+              <textarea id="fieldLabsSummary" rows="4" placeholder="Hb, GB, PCR, Crea, BUN, ELP, Pruebas hepáticas, Cultivos..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 6: ANTIBIÓTICOS, DISPOSITIVOS INVASIVOS Y FÁRMACOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          
+          <!-- Antibiotics -->
+          <div class="lg:col-span-6 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
+            <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">
+              💊 Antibióticos Activos (Con Días y Meta)
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-700/70">
+              <div class="sm:col-span-5">
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Antibiótico</label>
+                <input id="newAtbName" list="commonAtbList" type="text" placeholder="Ceftriaxona, Meropenem..." class="w-full px-2.5 py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+                <datalist id="commonAtbList"></datalist>
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Dosis / Vía</label>
+                <input id="newAtbDose" type="text" placeholder="2g c/24h EV" class="w-full px-2.5 py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Día/Meta</label>
+                <div class="flex items-center gap-0.5">
+                  <input id="newAtbCurrentDay" type="number" min="0" max="120" value="1" class="w-10 text-center py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200" />
+                  <span class="text-xs text-slate-400">/</span>
+                  <input id="newAtbTargetDays" type="number" min="1" max="120" value="7" class="w-10 text-center py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200" />
+                </div>
+              </div>
+              <div class="sm:col-span-2">
+                <button type="button" onclick="addAntibioticToModal()" class="w-full py-1.5 px-2 rounded-lg text-xs font-bold bg-cyan-600 hover:bg-cyan-700 text-white">+ ATB</button>
+              </div>
+            </div>
+            <div id="modalAtbList" class="space-y-2"></div>
+          </div>
+
+          <!-- Invasive Devices & Base Medications -->
+          <div class="lg:col-span-6 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
+            <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+              🔌 Dispositivos Invasivos (VVP, CVC, Foley, SNG, Drenajes)
+            </h4>
+            <div class="flex flex-wrap gap-2 items-center bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-700/70">
+              <select id="newDeviceNameSelect" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                <option value="VVP">VVP (Vía Venosa)</option>
+                <option value="CVC">CVC (Catéter Central)</option>
+                <option value="Foley (CUP)">Sonda Foley (CUP)</option>
+                <option value="SNG / SNE">SNG / SNE</option>
+                <option value="Drenaje">Drenaje Quirúrgico</option>
+                <option value="Línea Arterial">Línea Arterial</option>
+                <option value="TOT / TQT">TOT / Traqueostomía</option>
+              </select>
+              <div class="flex items-center gap-1 text-xs">
+                <span>Día:</span>
+                <input id="newDeviceDays" type="number" min="0" max="120" value="1" class="w-12 text-center py-1 rounded-lg font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+              </div>
+              <button type="button" onclick="addDeviceToModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white">+ Dispositivo</button>
+            </div>
+            <div id="modalDevicesList" class="flex flex-wrap gap-1.5"></div>
+
+            <div class="pt-2">
+              <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">💉 Indicaciones / Fármacos de Base / Infusiones</label>
+              <textarea id="fieldMedications" rows="3" placeholder="- Enoxaparina 40mg SC día&#10;- Omeprazol 20mg VO día..." class="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 7: PENDIENTES Y NOTIFICACIONES DE ESTA CAMA -->
+        <div class="bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl p-4 border border-rose-200/80 dark:border-rose-800/60 space-y-3">
+          <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+            📌 Pendientes y Alertas de esta Cama
+          </h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+            <div class="sm:col-span-2">
+              <select id="modalTaskCategory" class="w-full px-2.5 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800">
+                <option value="Reevaluar">🔄 Reevaluar</option>
+                <option value="Imágenes">🩻 Imágenes</option>
+                <option value="Laboratorio">🧪 Laboratorio</option>
+                <option value="Interconsulta">👨‍⚕️ Interconsulta</option>
+                <option value="Procedimiento">💉 Procedimiento</option>
+                <option value="Alta/Trámite">📋 Trámite / Alta</option>
+              </select>
+            </div>
+            <div class="sm:col-span-4">
+              <input id="modalTaskText" type="text" placeholder="Ej: Pedir Rx tórax control, rescatar cultivo..." class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800" />
+            </div>
+            <div class="sm:col-span-3 flex items-center gap-1">
+              <select id="modalTaskTiming" onchange="toggleModalTaskDaysInput()" class="w-full px-2.5 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800">
+                <option value="today">Hoy (Urgente)</option>
+                <option value="later">Más tarde hoy</option>
+                <option value="tomorrow">Mañana (1 día)</option>
+                <option value="in_days">En X días...</option>
+              </select>
+              <input id="modalTaskDaysNumber" type="number" min="1" max="90" value="5" class="hidden w-14 px-2 py-2 rounded-xl text-xs font-bold text-center bg-white dark:bg-slate-900 border border-rose-300" />
+            </div>
+            <div class="sm:col-span-2">
+              <input id="modalTaskDueTime" type="time" class="w-full px-2.5 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800" title="Hora de notificación" />
+            </div>
+            <div class="sm:col-span-1">
+              <button type="button" onclick="addTaskInsideModal()" class="w-full py-2 px-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white">+ Añadir</button>
+            </div>
+          </div>
+
+          <div id="modalTasksList" class="space-y-2 pt-1"></div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-4 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
+        <button type="button" onclick="deleteBedFromModal()" class="text-xs font-semibold text-rose-600 hover:text-rose-700">
+          🗑️ Eliminar esta cama de la sala
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeBedModal()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-200 dark:bg-slate-700">
+            Cancelar
+          </button>
+          <button type="button" onclick="saveBedModal()" class="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-md">
+            💾 Guardar Cambios
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: MOVER / TRASLADAR PACIENTE DE CAMA (O INTERCAMBIAR)
+  ========================================================================== -->
+  <div id="movePatientModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div class="px-5 py-4 bg-indigo-600 text-white flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold">⇄ Mover / Trasladar Paciente de Cama</h3>
+          <p class="text-xs text-indigo-100">Traslada al paciente dentro del mismo servicio o hacia UTI, UCI u otro piso.</p>
+        </div>
+        <button onclick="closeMovePatientModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs space-y-1">
+          <div class="text-slate-500 font-semibold uppercase">Origen Actual:</div>
+          <div id="moveModalOriginInfo" class="text-sm font-extrabold text-slate-900 dark:text-white"></div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">1. Selecciona el Servicio Destino</label>
+            <select id="moveTargetServiceSelect" onchange="populateMoveTargetRooms()" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">2. Selecciona la Sala Destino</label>
+            <select id="moveTargetRoomSelect" onchange="populateMoveTargetBeds()" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">3. Selecciona la Cama Destino (Si está ocupada, intercambiará ambos pacientes)</label>
+            <select id="moveTargetBedSelect" class="w-full px-3 py-2.5 rounded-xl text-sm font-extrabold bg-white dark:bg-slate-900 border-2 border-indigo-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">¿Cómo queda la cama de origen (si no es intercambio)?</label>
+            <select id="moveOriginAfterStatus" class="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <option value="free">🟢 Queda Libre de inmediato</option>
+              <option value="cleaning">🔵 Queda en Aseo Terminal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="closeMovePatientModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700">Cancelar</button>
+          <button onclick="confirmMoveOrSwapPatient()" class="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+            ⇄ Confirmar Traslado
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 3: GESTOR DE SERVICIOS DEL HOSPITAL Y NUMERACIÓN CORRELATIVA (1 a N)
+  ========================================================================== -->
+  <div id="hospitalConfigModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+        <div>
+          <h3 class="text-base font-bold">🏥 Configuración del Hospital, Servicios y Respaldo</h3>
+          <p class="text-xs text-slate-300">Crea Servicios (Cirugía, UTI, UCI, Traumatología...) con numeración correlativa de camas (1 a 55+).</p>
+        </div>
+        <button onclick="closeHospitalConfigModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+
+      <div class="p-5 space-y-5 overflow-y-auto flex-1">
+        <!-- Hospital Name & My Default Service -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nombre del Hospital / Clínica</label>
+            <input id="configHospitalNameInput" type="text" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mi Servicio Principal</label>
+            <select id="configMyServiceSelect" class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></select>
+          </div>
+          <div class="sm:col-span-2">
+            <button onclick="saveHospitalGeneralConfig()" class="w-full py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white">
+              Guardar Nombre del Hospital y Mi Servicio
+            </button>
+          </div>
+        </div>
+
+        <!-- Existing Services List -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Servicios Actuales en el Hospital</h4>
+          <div id="configServicesListContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- Create or Rebuild a Service with Correlative Bed Numbers (1 to N) -->
+        <form onsubmit="handleSaveOrCreateService(event)" class="bg-teal-50/60 dark:bg-teal-950/20 p-4 rounded-2xl border border-teal-200 dark:border-teal-800 space-y-3">
+          <input id="editingServiceIdInput" type="hidden" />
+          <div class="flex items-center justify-between">
+            <h4 id="serviceFormTitle" class="text-xs sm:text-sm font-extrabold uppercase text-teal-900 dark:text-teal-300">
+              ➕ Crear Nuevo Servicio (o Editar Estructura de Salas Correlativas)
+            </h4>
+            <button type="button" onclick="resetServiceForm()" class="text-xs text-teal-700 underline">Limpiar formulario</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div class="sm:col-span-5">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nombre del Servicio</label>
+              <input id="serviceNameInput" type="text" required placeholder="Ej: Cirugía, Medicina, UTI, UCI, Pensionado..." class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Ícono</label>
+              <input id="serviceIconInput" type="text" value="🏥" class="w-full px-3 py-2 rounded-xl text-sm text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">1° Cama N°</label>
+              <input id="serviceStartBedInput" type="number" min="1" max="999" value="1" class="w-full px-3 py-2 rounded-xl text-sm font-bold text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" title="Número en que empieza la primera cama de la Sala 1" />
+            </div>
+            <div class="sm:col-span-3 flex items-end pb-1">
+              <label class="inline-flex items-center gap-2 text-xs font-bold text-teal-800 dark:text-teal-300 cursor-pointer">
+                <input id="serviceContinuousCheck" type="checkbox" checked class="w-4 h-4 rounded text-teal-600" />
+                <span>Numeración continua (Sala 2 sigue a Sala 1)</span>
+              </label>
+            </div>
+
+            <div class="sm:col-span-12">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Distribución de Camas por Sala (Separadas por coma — Ej: Cirugía 55 camas en salas: <code class="text-teal-700 font-mono">6, 6, 6, 6, 6, 6, 6, 6, 5, 2</code>)
+              </label>
+              <input id="serviceRoomsPatternInput" type="text" placeholder="Ej: 6, 6, 6, 6, 4, 2 (Deja vacío si solo quieres cambiar el nombre sin alterar salas)" class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700" />
+              <p class="text-[11px] text-slate-500 mt-1">
+                Si escribes <code class="font-mono">6, 6, 4</code>: la Sala 1 tendrá las Camas 1 a 6, la Sala 2 tendrá las Camas 7 a 12, y la Sala 3 tendrá las Camas 13 a 16.
+              </p>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white shadow">
+            💾 Guardar Servicio y Numerar Camas Correlativamente
+          </button>
+        </form>
+
+        <!-- Backup JSON Export & Import (FIXED!) -->
+        <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="exportFullHospitalBackup()" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800">
+              ⬇️ Descargar Respaldo (.json)
+            </button>
+            <label class="px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer">
+              <span>⬆️ Restaurar Respaldo (.json)</span>
+              <input type="file" accept=".json,application/json" onchange="importFullHospitalBackup(event)" class="hidden" />
+            </label>
+          </div>
+          <button type="button" onclick="resetToDemoHospital()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-rose-100 text-rose-800 hover:bg-rose-200">
+            🔄 Restaurar Hospital Demo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 4: CREAR / EDITAR SALA DENTRO DE UN SERVICIO
+  ========================================================================== -->
+  <div id="roomModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="roomModalTitle" class="text-base font-bold">Configurar Sala</h3>
+        <button onclick="closeRoomModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+
+      <form onsubmit="saveRoomModal(event)" class="p-5 space-y-4">
+        <input id="editingRoomServiceId" type="hidden" />
+        <input id="editingRoomId" type="hidden" />
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nombre de la Sala</label>
+          <input id="roomNameInput" type="text" required placeholder="Ej: Sala 1, Sala Aislamiento, Intermedio..." class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Cantidad de Camas en esta Sala</label>
+          <input id="roomBedCountInput" type="number" min="1" max="40" value="6" required class="w-full px-3 py-2 rounded-xl text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          <p class="text-[11px] text-teal-600 dark:text-teal-400 mt-1">
+            Las camas se numerarán correlativamente siguiendo el orden del servicio.
+          </p>
+        </div>
+
+        <div class="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-xl border border-amber-200 dark:border-amber-800 space-y-2">
+          <label class="block text-xs font-bold text-amber-900 dark:text-amber-300">⚠️ ¿La Sala Completa es de Aislamiento / Cohorte?</label>
+          <select id="roomIsolationInput" class="w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700">
+            <option value="none">No (Sala normal / aislamiento individual por cama)</option>
+            <option value="cohorte_contacto">🟡 Sala en Cohorte de Contacto</option>
+            <option value="cohorte_gotitas">🔵 Sala en Cohorte de Gotitas / Respiratoria</option>
+            <option value="cohorte_aereo">🟣 Sala de Aislamiento Aéreo (Presión Negativa)</option>
+            <option value="protector">🟢 Sala de Aislamiento Protector</option>
+          </select>
+          <input id="roomIsolationNoteInput" type="text" placeholder="Nota opcional (Ej: Cohorte KPC / Influenza)" class="w-full px-3 py-1.5 rounded-xl text-xs bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeRoomModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white">Guardar Sala</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 5: COMPARTIR CAMA (.MD / WHATSAPP)
+  ========================================================================== -->
+  <div id="shareModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div class="px-5 py-4 bg-emerald-600 text-white flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold">📲 Compartir Paciente por WhatsApp o Archivo .md</h3>
+          <p class="text-xs text-emerald-100">Envía la ficha clínica lista para importar en cualquier cama de MediPiso.</p>
+        </div>
+        <button onclick="closeShareModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <button onclick="sendPatientViaWhatsAppDirect()" class="p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-left">
+            <div class="text-sm font-bold text-emerald-800 dark:text-emerald-300">1. Enviar por WhatsApp</div>
+            <p class="text-[11px] text-emerald-700/80 dark:text-emerald-400 mt-0.5">Abre WhatsApp con la ficha y código importable.</p>
+          </button>
+          <button onclick="downloadPatientMarkdownFile()" class="p-3 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 text-left">
+            <div class="text-sm font-bold text-teal-800 dark:text-teal-300">2. Descargar .md</div>
+            <p class="text-[11px] text-teal-700/80 dark:text-teal-400 mt-0.5">Descarga el archivo `.md` del paciente.</p>
+          </button>
+          <button onclick="copyShareMarkdownToClipboard()" class="p-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 text-left">
+            <div class="text-sm font-bold text-indigo-800 dark:text-indigo-300">3. Copiar Texto</div>
+            <p class="text-[11px] text-indigo-700/80 dark:text-indigo-400 mt-0.5">Copia todo al portapapeles.</p>
+          </button>
+        </div>
+        <textarea id="shareMarkdownPreview" readonly rows="10" class="w-full p-3 rounded-xl text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 6: IMPORTAR PACIENTE (.MD O WHATSAPP) A CUALQUIER SERVICIO Y CAMA
+  ========================================================================== -->
+  <div id="importModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div class="px-5 py-4 bg-teal-600 text-white flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold">📥 Importar Paciente (.md o WhatsApp)</h3>
+          <p class="text-xs text-teal-100">Carga el archivo o pega el mensaje y elige en qué Servicio y Cama ubicarlo.</p>
+        </div>
+        <button onclick="closeImportModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+      <div class="p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Paso 1: Sube el archivo `.md` o pega el texto de WhatsApp</label>
+            <label class="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200 cursor-pointer">
+              <span>📂 Cargar archivo .md</span>
+              <input type="file" accept=".md,.txt" onchange="handleImportFileUpload(event)" class="hidden" />
+            </label>
+          </div>
+          <textarea id="importMarkdownInput" rows="5" oninput="parseIncomingMarkdownPreview()" placeholder="Pega aquí el mensaje de WhatsApp o contenido .md..." class="w-full p-3 rounded-xl text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+        </div>
+
+        <div id="importDetectedPreviewBox" class="hidden bg-emerald-50/80 dark:bg-emerald-950/30 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-1">
+          <div class="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase">✅ Paciente Detectado:</div>
+          <div id="importDetectedSummary" class="text-xs sm:text-sm"></div>
+        </div>
+
+        <div class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+          <label class="block text-sm font-extrabold text-slate-900 dark:text-white">🛏️ ¿En qué Servicio, Sala y Cama está ubicado?</label>
+          <select id="importTargetBedSelect" class="w-full px-3 py-2.5 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-teal-500"></select>
+          <label class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 pt-1 cursor-pointer">
+            <input id="importMarkAsMyBed" type="checkbox" checked class="w-4 h-4 rounded text-indigo-600" />
+            <span>⭐ Marcar automáticamente como "Mi Cama"</span>
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="closeImportModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700">Cancelar</button>
+          <button onclick="confirmPatientImport()" class="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+            📥 Importar Paciente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 7: NUEVO DÍA / INICIAR RONDA MATUTINA
+  ========================================================================== -->
+  <div id="newDayModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div class="px-5 py-4 bg-amber-500 text-white flex items-center justify-between">
+        <h3 class="text-base font-bold">☀️ Iniciar Nuevo Día en el Hospital</h3>
+        <button onclick="closeNewDayModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+      <div class="p-5 space-y-3 text-xs sm:text-sm">
+        <div id="newDayAlreadyRunWarning" class="hidden p-3 rounded-xl bg-rose-100 text-rose-800 font-bold text-xs">
+          ⚠️ Atención: Ya ejecutaste "Nuevo Día" hoy. Si continúas sumarás otro día adicional.
+        </div>
+        <label class="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer">
+          <input id="newDayResetSeen" type="checkbox" checked class="mt-0.5 w-4 h-4 rounded text-teal-600" />
+          <span><strong>Desmarcar "Visto hoy"</strong> en todas las camas para iniciar la visita.</span>
+        </label>
+        <label class="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer">
+          <input id="newDayIncrementHosp" type="checkbox" checked class="mt-0.5 w-4 h-4 rounded text-teal-600" />
+          <span><strong>Sumar +1 día de hospitalización</strong> a todos los pacientes.</span>
+        </label>
+        <label class="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer">
+          <input id="newDayIncrementAtb" type="checkbox" checked class="mt-0.5 w-4 h-4 rounded text-teal-600" />
+          <span><strong>Sumar +1 día a los Antibióticos y Dispositivos</strong> (VVP, CVC, Foley, SNG).</span>
+        </label>
+        <label class="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer">
+          <input id="newDayDecrementTasks" type="checkbox" checked class="mt-0.5 w-4 h-4 rounded text-teal-600" />
+          <span><strong>Descontar 1 día a los pendientes programados</strong> y activar alertas para los que cumplen hoy.</span>
+        </label>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button onclick="closeNewDayModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700">Cancelar</button>
+          <button onclick="confirmStartNewDay()" class="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white">☀️ Confirmar Nuevo Día</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+  <!-- SCRIPTS MODULARES DE MEDIPISO 2.0 -->
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
