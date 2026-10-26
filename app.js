@@ -2504,7 +2504,7 @@ async function sendPatientToDocsFromModal() {
 
   showToast("☁️ Conectando con Google Docs...", "info");
 
-  try {
+try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify(payload)
@@ -2514,8 +2514,8 @@ async function sendPatientToDocsFromModal() {
     if (result.status === "success") {
       showToast(`✅ Evolución guardada en el documento`, "success");
     } else {
-      showToast("❌ Error al guardar: Comprueba el enlace.", "danger");
-      localStorage.removeItem("medipiso_doc_id"); 
+      // ESTA LÍNEA AHORA NOS REVELARÁ EL ERROR EXACTO:
+      showToast("❌ Error Google: " + result.message, "danger");
     }
   } catch (error) {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
