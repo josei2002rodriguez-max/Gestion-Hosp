@@ -2431,26 +2431,20 @@ window.onload = function () {
 // 15. CONEXIÓN A GOOGLE DOCS (API REST - DINÁMICO)
 // =========================================================================
 async function sendPatientToDocsFromModal() {
-  // 🚨 DETECTOR DE ACTUALIZACIÓN: 
-  alert("✅ ¡El código nuevo por fin se cargó en el navegador!");
-
   if (!currentEditingRef) return;
   
-  // 1. Guardamos la copia de seguridad ANTES de cerrar la ventana
+  // 1. Guardar copia antes de cerrar
   const ref = { ...currentEditingRef };
-  
-  // 2. Guardamos cambios (esto borra currentEditingRef)
   saveBedModal(); 
   
-  // 3. Usamos nuestra copia (ref) que sobrevivió
   const found = findEntity(ref.serviceId, ref.roomId, ref.bedId);
   if (!found || !found.bed || !found.bed.patient) return;
   const p = found.bed.patient;
 
-  // 4. SOLICITAR EL DOCUMENTO DINÁMICO
+  // 2. Pedir link del doc
   let targetDocId = localStorage.getItem("medipiso_doc_id");
   if (!targetDocId) {
-    let docLink = prompt("Primera configuración:\nPega aquí el enlace de tu documento de Google Docs (el que ya usas para tus evoluciones):");
+    let docLink = prompt("Primera configuración:\nPega aquí el enlace de tu documento de Google Docs:");
     if (!docLink) return;
     
     let match = docLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -2458,7 +2452,7 @@ async function sendPatientToDocsFromModal() {
     localStorage.setItem("medipiso_doc_id", targetDocId);
   }
 
-  // 5. PEDIR LA FIRMA
+  // 3. Pedir firma
   const firma = prompt("Firma responsable (Ej: Int. Pérez)\n\n*Para configurar otro documento, escribe: CAMBIAR DOC", userSignature);
   if (firma === null) return; 
   
@@ -2471,7 +2465,7 @@ async function sendPatientToDocsFromModal() {
   userSignature = firma;
   localStorage.setItem("medipiso_firma", firma);
 
-  // 6. FORMATEAR DATOS CLÍNICOS
+  // 4. Formatear datos
   const atbTxt = p.antibiotics && p.antibiotics.length
     ? p.antibiotics.map(a => `${a.name} (${a.dose}) D${a.currentDay}/${a.targetDays}`).join(" | ")
     : "";
@@ -2484,7 +2478,6 @@ async function sendPatientToDocsFromModal() {
     ? p.tasks.filter(t => !t.completed).map(t => `- [${t.category}] ${t.text}`).join("\n")
     : "Sin pendientes activos";
 
-  // 7. PREPARAR PAQUETE
   const payload = {
     docId: targetDocId,
     camaCode: found.bed.code,
@@ -2504,7 +2497,8 @@ async function sendPatientToDocsFromModal() {
 
   showToast("☁️ Conectando con Google Docs...", "info");
 
-try {
+  // 5. Enviar a Google
+  try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify(payload)
@@ -2514,7 +2508,7 @@ try {
     if (result.status === "success") {
       showToast(`✅ Evolución guardada en el documento`, "success");
     } else {
-      // ESTA LÍNEA AHORA NOS REVELARÁ EL ERROR EXACTO:
+      // AQUÍ NOS MOSTRARÁ EL ERROR EXACTO QUE MANDA GOOGLE
       showToast("❌ Error Google: " + result.message, "danger");
     }
   } catch (error) {
