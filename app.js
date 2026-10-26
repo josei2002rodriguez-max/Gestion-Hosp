@@ -2431,18 +2431,19 @@ window.onload = function () {
 };
 
 // =========================================================================
-// 15. CONEXIÓN A GOOGLE DOCS (API REST)
-// =========================================================================
-// =========================================================================
 // 15. CONEXIÓN A GOOGLE DOCS (API REST - DINÁMICO)
 // =========================================================================
 async function sendPatientToDocsFromModal() {
   if (!currentEditingRef) return;
   
-  // 1. Guardar cambios en el celular primero
+  // ¡CLAVE! Guardamos una copia exacta de la referencia de la cama antes de guardarla
+  const ref = { ...currentEditingRef };
+  
+  // 1. Guardar cambios (esto cierra el modal y borra currentEditingRef original)
   saveBedModal(); 
   
-  const found = findEntity(currentEditingRef.serviceId, currentEditingRef.roomId, currentEditingRef.bedId);
+  // Usamos nuestra copia (ref) que sobrevivió al cierre de la ventana
+  const found = findEntity(ref.serviceId, ref.roomId, ref.bedId);
   if (!found || !found.bed || !found.bed.patient) return;
   const p = found.bed.patient;
 
