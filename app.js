@@ -2738,7 +2738,7 @@ window.onload = function () {
 async function sendPatientToDocsFromModal() {
   if (!currentEditingRef) return;
   
-  // 1. Guardar copia antes de cerrar
+  // Guardar copia antes de cerrar
   const ref = { ...currentEditingRef };
   saveBedModal(); 
   
@@ -2746,75 +2746,142 @@ async function sendPatientToDocsFromModal() {
   if (!found || !found.bed || !found.bed.patient) return;
   const p = found.bed.patient;
 
-  // 2. Pedir link del doc
+  // 1. Pedir link del doc
   let targetDocId = localStorage.getItem("medipiso_doc_id");
   if (!targetDocId) {
     let docLink = prompt("Primera configuración:\nPega aquí el enlace de tu documento de Google Docs:");
     if (!docLink) return;
-    
     let match = docLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
     targetDocId = match ? match[1] : docLink.trim();
     localStorage.setItem("medipiso_doc_id", targetDocId);
   }
 
-  // 3. Pedir firma (¡AQUÍ ESTABA EL ERROR ARREGLADO!)
-  let savedFirma = localStorage.getItem("medipiso_firma") || "";
-  const firma = prompt("Firma responsable (Ej: Int. Pérez)\n\n*Para configurar otro documento, escribe: CAMBIAR DOC", savedFirma);
+  // 2. Pedir firma
+  let savedFirma = localStorage.getItem("medipiso_firma") || "INT. ";
+  const firma = prompt("Firma responsable\nDebe iniciar con DR., DRA. o INT. para que el Sidebar pueda leerla.\n\n*Para cambiar documento, escribe: CAMBIAR DOC", savedFirma);
   if (firma === null) return; 
-  
   if (firma === "CAMBIAR DOC") {
     localStorage.removeItem("medipiso_doc_id");
     showToast("Enlace borrado. Vuelve a presionar 'Enviar a Docs'.", "info");
     return;
   }
+  localStorage.setItem("medipiso_firma", firma.toUpperCase());
+
+  // 3. CONSTRUCCIÓN DEL FORMATO ESTRICTO (COMPATIBLE CON REGEX DEL SIDEBAR)
+  let evoText = "";
   
-  localStorage.setItem("medipiso_firma", firma);
+  // Bloque Identificación y Antecedentes
+  evoText += `NOMBRE: ${p.name || "-"}\n`;
+  evoText += `EDAD: ${p.age || "-"}\n`;
+  evoText += `RUT: ${p.rut || "-"}\n`;
+  evoText += `CAMA: ${found.bed.code}\n`;
+  evoText += `AISLAMIENTO: ${p.isolationType !== 'none' ? p.isolationType.toUpperCase() : 'ESTÁNDAR'}\n`;
+  
+  const hasDevice = (name) => p.devices.some(d => d.name.includes(name)) ? "SÍ" : "NO";
+  evoText += `CUP: ${hasDevice('Foley')}\n`;
+  evoText += `CVC: ${hasDevice('CVC')}\n`;
+  evoText += `SNG: ${hasDevice('SNG')}\n`;
+  
+  evoText += `ALERGIAS: ${p.allergies || "-"}\n`;
+  evoText += `HÁBITOS: ${p.habits.length ? p.habits.join(" / ") : "-"}\n`;
+  evoText += `MÉDICOS: ${p.medicalHistory.length ? p.medicalHistory.join(" / ") : "-"}\n`;
+  evoText += `QUIRÚRGICOS: ${p.surgicalHistory.length ? p.surgicalHistory.join(" / ") : "-"}\n`;
+  evoText += `FÁRMACOS: ${p.homeMedications.length ? p.homeMedications.join(" / ") : "-"}\n\n`;
 
-  // 4. Formatear datos
-  const atbTxt = p.antibiotics && p.antibiotics.length
-    ? p.antibiotics.map(a => `${a.name} (${a.dose}) D${a.currentDay}/${a.targetDays}`).join(" | ")
-    : "";
+  // Bloque Diagnósticos
+  evoText += `DIAGNÓSTICOS:\n`;
+  (p.currentSurgeries || []).forEach(cx => {
+    evoText += `- CIRUGÍA: ${cx.name} (DPO ${cx.postOpDay})\n`;
+  });
+  (p.diagnoses || []).forEach(dx => {
+    evoText += `- ${dx.main}\n`;
+    dx.observations.forEach(obs => evoText += `* ${obs}\n`);
+  });
+  if (!p.currentSurgeries?.length && !p.diagnoses?.length) evoText += `- Sin diagnósticos\n`;
+  evoText += `\n`;
 
-  const dispTxt = p.devices && p.devices.length
-    ? p.devices.map(d => `${d.name} D${d.days}`).join(" | ")
-    : "";
+  // Bloque Resumen
+  evoText += `RESUMEN:\n`;
+  evoText += `EVOLUCIÓN SUBJETIVA: ${p.evolution?.subjective || "-"}\n`;
+  evoText += `SITUACIÓN ACTUAL: ${p.evolution?.currentStatus || "-"}\n\n`;
 
-  const pendTxt = p.tasks && p.tasks.filter(t => !t.completed).length
-    ? p.tasks.filter(t => !t.completed).map(t => `- [${t.category}] ${t.text}`).join("\n")
-    : "Sin pendientes activos";
+  // Bloque CSV y Drenajes
+  evoText += `CSV Y DRENAJES:\n`;
+  const vit = p.vitals || {};
+  let oxig = vit.o2Type === "Ambiental" ? "AMBIENTAL" : `${vit.o2Type} ${vit.o2Liters}`;
+  evoText += `PA ${vit.pa || "-"}, FC ${vit.fc || "-"}, T° ${vit.temp || "-"}, FR ${vit.fr || "-"}, SAT ${vit.sat || "-"}% ${oxig}, HGT ${vit.hgt || "-"}, DOLOR (EVA) ${vit.eva || "-"}/10. DIURESIS: ${vit.diuresis || "(+)"} DEPOSICIONES: ${vit.bowel || "(+)"}\n`;
+  (p.devices || []).forEach(dev => {
+    if (dev.name.includes("Drenaje")) evoText += `- DRENAJE Quirúrgico (${dev.name}): Día ${dev.days}\n`;
+  });
+  evoText += `\n`;
+
+  // Bloque Examen Físico
+  evoText += `EX FÍSICO:\n`;
+  const ef = p.physicalExam || {};
+  evoText += `- GENERAL: ${ef.general || "-"}\n`;
+  evoText += `- CARDÍACO: ${ef.cardiac || "-"}\n`;
+  evoText += `- PULMONAR: ${ef.pulmonary || "-"}\n`;
+  evoText += `- ABDOMEN: ${ef.abdomen || "-"}\n`;
+  evoText += `- HERIDA OPERATORIA (HO): ${ef.surgicalWound || "-"}\n`;
+  evoText += `- EEII: ${ef.lowerLimbs || "-"}\n`;
+  evoText += `- NEUROLÓGICO: ${ef.neuro || "-"}\n\n`;
+
+  // Bloque Laboratorio
+  if (p.labs && p.labs.length) {
+    evoText += `LABORATORIO:\n`;
+    p.labs.forEach(lab => {
+      let dateParts = lab.date.split("-");
+      let fDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : lab.date;
+      evoText += `FECHA (${fDate}):\n`;
+      lab.exams.forEach(ex => evoText += `- ${ex.name}: ${ex.value} ${ex.unit || "Sin un."}\n`);
+    });
+    evoText += `\n`;
+  }
+
+  // Bloque Imágenes
+  if (p.images && p.images.length) {
+    evoText += `IMÁGENES:\n`;
+    p.images.forEach(img => {
+      evoText += `- EXAMEN: ${img.name} | FECHA: ${img.date || "-"} | DESC: ${img.description || "-"}\n`;
+    });
+    evoText += `\n`;
+  }
+
+  // Bloque Problemas y Planes
+  evoText += `PROBLEMAS Y PLANES:\n`;
+  (p.systemsPlan || []).forEach(sys => {
+    evoText += `- ${sys.system}: ${sys.plan}\n`;
+  });
+  
+  if (p.hospitalMedications || p.antibiotics?.length || p.tasks?.length) {
+    evoText += `- INDICACIONES Y FÁRMACOS:\n`;
+    if (p.hospitalMedications) evoText += `${p.hospitalMedications}\n`;
+    if (p.antibiotics?.length) evoText += `ATB: ${p.antibiotics.map(a => `${a.name} ${a.dose} (Día ${a.currentDay}/${a.targetDays})`).join(", ")}\n`;
+    let pend = (p.tasks || []).filter(t => !t.completed);
+    if (pend.length) evoText += `PENDIENTES: ${pend.map(t => `[${t.category}] ${t.text}`).join(" | ")}\n`;
+  }
+  
+  // La firma corta el Regex
+  evoText += `\n${firma.toUpperCase()}\n`;
 
   const payload = {
     docId: targetDocId,
     camaCode: found.bed.code,
     servicio: found.service.name,
-    paciente: p.name || "Sin nombre",
-    edad: p.age || "-",
-    rut: p.rut || "-",
-    diasHosp: p.hospDays || 1,
-    aislamiento: getIsolationMeta(p.isolationType).label,
-    diagnosticos: p.diagnoses || "Sin diagnósticos",
-    plan: (p.clinicalPlan || "Sin plan redactado") + "\n\nFIRMA: " + firma,
-    labs: p.labsSummary || "-",
-    atb: atbTxt,
-    dispositivos: dispTxt,
-    pendientes: pendTxt
+    textoCompleto: evoText
   };
 
   showToast("☁️ Conectando con Google Docs...", "info");
 
-  // 5. Enviar a Google
+  // 4. Enviar a Google
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify(payload)
     });
     const result = await response.json();
-    
-    if (result.status === "success") {
-      showToast(`✅ Evolución guardada en el documento`, "success");
-    } else {
-      showToast("❌ Error Google: " + result.message, "danger");
-    }
+    if (result.status === "success") showToast(`✅ Evolución guardada en el documento`, "success");
+    else showToast("❌ Error Google: " + result.message, "danger");
   } catch (error) {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
   }
