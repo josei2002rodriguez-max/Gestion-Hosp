@@ -1356,35 +1356,35 @@ function openBedModal(serviceId, roomId, bedId) {
   if (!found || !found.bed) return;
   currentEditingRef = { serviceId, roomId, bedId };
   const { service, room, bed } = found;
+  
+  // Usar el nuevo JSON estructurado si no existe
   const p = bed.patient || createEmptyPatient();
+  // Asegurar retrocompatibilidad si la cama venía de la v2.0
+  if (!p.vitals) Object.assign(p, createEmptyPatient(), bed.patient);
 
+  // --- TOP HEADER ---
   document.getElementById("modalBedCodeBadge").textContent = bed.code;
   document.getElementById("modalRoomTitle").textContent = `${service.icon} ${service.name} — 🚪 ${room.name}`;
+  
+  // --- PESTAÑA 1: INGRESO Y ALERTAS ---
   document.getElementById("fieldBedCode").value = bed.code;
   document.getElementById("fieldBedStatus").value = bed.status || "occupied";
-
-  // Poblar selector de Servicio Tratante
+  
   const srvSel = document.getElementById("fieldPatientServiceId");
   const ownerSrvId = bed.patientServiceId || service.id;
-  srvSel.innerHTML = appState.services.map(s =>
-    `<option value="${s.id}" ${s.id === ownerSrvId ? "selected" : ""}>${escapeHtml(s.icon)} ${escapeHtml(s.name)} ${s.id !== service.id ? `(Ectópico en ${service.name})` : `(Servicio propio de la cama)`}</option>`
-  ).join("");
+  srvSel.innerHTML = appState.services.map(s => `<option value="${s.id}" ${s.id === ownerSrvId ? "selected" : ""}>${escapeHtml(s.icon)} ${escapeHtml(s.name)} ${s.id !== service.id ? `(Ectópico)` : ``}</option>`).join("");
 
   document.getElementById("fieldIsMyBed").checked = !!bed.isMyBed;
   document.getElementById("fieldSeenToday").checked = !!bed.seenToday;
 
-  // Alertas
   document.getElementById("fieldPatientAllergies").value = p.allergies || "";
   document.getElementById("fieldPatientLet").value = p.letStatus || "Full / Sin restricción";
-  document.getElementById("fieldPatientOxygen").value = p.oxygenSupport || "Ambiental";
-
-  // Aislamiento y patógenos
   document.getElementById("fieldIsolationType").value = p.isolationType || "none";
+
   modalTempPathogens = Array.isArray(p.pathogens) ? [...p.pathogens] : [];
   document.getElementById("pathogenSearchInput").value = "";
   renderModalSelectedPathogens();
 
-  // Demográficos
   document.getElementById("fieldPatientName").value = p.name || "";
   document.getElementById("fieldPatientRut").value = p.rut || "";
   document.getElementById("fieldPatientDob").value = p.dob || "";
@@ -1392,14 +1392,81 @@ function openBedModal(serviceId, roomId, bedId) {
   document.getElementById("fieldPatientRecordNumber").value = p.recordNumber || "";
   document.getElementById("fieldPatientPhone").value = p.phone || "";
   document.getElementById("fieldPatientAddress").value = p.address || "";
-
-  // Clínicos
   document.getElementById("fieldAdmissionDate").value = p.admissionDate || new Date().toISOString().slice(0, 10);
   document.getElementById("fieldHospDays").value = p.hospDays !== undefined ? p.hospDays : 1;
-  document.getElementById("fieldDiagnoses").value = p.diagnoses || "";
-  document.getElementById("fieldClinicalPlan").value = p.clinicalPlan || "";
-  document.getElementById("fieldLabsSummary").value = p.labsSummary || "";
-  document.getElementById("fieldMedications").value = p.medications || "";
+
+  // --- PESTAÑA 2: HISTORIA Y EXAMEN FÍSICO ---
+  const clearList = (id) => { document.getElementById(id).innerHTML = ''; };
+  clearList('modalMedHistoryList'); clearList('modalSurgHistoryList'); clearList('modalHabitsList'); clearList('modalHomeMedsList');
+  
+  (p.medicalHistory || []).forEach(item => addHistoryItem('modalMedHistoryList', 'lista-enfermedades', 'Patología', item));
+  (p.surgicalHistory || []).forEach(item => addHistoryItem('modalSurgHistoryList', 'lista-cirugias', 'Cirugía', item));
+  (p.habits || []).forEach(item => addHistoryItem('modalHabitsList', 'lista-habitos', 'Hábito', item));
+  (p.homeMedications || []).forEach(item => addHistoryItem('modalHomeMedsList', 'lista-farmacos', 'Fármaco base', item));
+
+  // Signos Vitales
+  const vit = p.vitals || {};
+  document.getElementById("v-pa").value = vit.pa || "";
+  document.getElementById("v-fc").value = vit.fc || "";
+  document.getElementById("v-t").value = vit.temp || "";
+  document.getElementById("v-fr").value = vit.fr || "";
+  document.getElementById("v-sat").value = vit.sat || "";
+  document.getElementById("v-hgt").value = vit.hgt || "";
+  document.getElementById("v-eva").value = vit.eva || "";
+  document.getElementById("v-diu").value = vit.diuresis || "(+)";
+  document.getElementById("v-dep").value = vit.bowel || "(+)";
+  
+  const o2Select = document.getElementById("v-o2-tipo");
+  o2Select.value = vit.o2Type || "Ambiental";
+  toggleModalO2Liters(o2Select);
+  document.getElementById("v-o2-lit").value = vit.o2Liters || "";
+
+  // Examen Físico
+  const ef = p.physicalExam || {};
+  document.getElementById("ef-gen").value = ef.general || "";
+  document.getElementById("ef-car").value = ef.cardiac || "";
+  document.getElementById("ef-pul").value = ef.pulmonary || "";
+  document.getElementById("ef-abd").value = ef.abdomen || "";
+  document.getElementById("ef-ho").value = ef.surgicalWound || "";
+  document.getElementById("ef-eeii").value = ef.lowerLimbs || "";
+  document.getElementById("ef-neu").value = ef.neuro || "";
+
+  // --- PESTAÑA 3: CLÍNICA Y EXÁMENES ---
+  clearList('modalCurrentSurgeriesList');
+  (p.currentSurgeries || []).forEach(cx => addCurrentSurgery(cx.name, cx.postOpDay));
+
+  clearList('modalDiagnosesList');
+  (p.diagnoses || []).forEach((dx) => {
+    addDiagnosis(dx.main);
+    const diagItems = document.querySelectorAll('.c-diag-item');
+    const lastDiag = diagItems[diagItems.length - 1];
+    const obsContainerId = lastDiag.querySelector('div[id$="-obs"]').id.replace('-obs', '');
+    (dx.observations || []).forEach(obs => addDiagnosisObservation(obsContainerId, obs));
+  });
+
+  const evo = p.evolution || {};
+  document.getElementById("evo-sub").value = evo.subjective || "";
+  document.getElementById("evo-act").value = evo.currentStatus || "";
+
+  clearList('modalLabsContainer');
+  (p.labs || []).forEach(lab => {
+    addLabBlock(lab.date);
+    const labBlocks = document.querySelectorAll('.c-lab-block');
+    const lastBlock = labBlocks[labBlocks.length - 1];
+    const rowsContainer = lastBlock.querySelector('div[id$="-rows"]');
+    rowsContainer.innerHTML = ''; // Limpiar la fila vacía por defecto
+    const blockId = rowsContainer.id.replace('-rows', '');
+    (lab.exams || []).forEach(ex => addLabRow(blockId, ex.name, ex.value, ex.unit));
+  });
+
+  clearList('modalImagesContainer');
+  (p.images || []).forEach(img => addImageRecord(img.name, img.date, img.description));
+
+  // --- PESTAÑA 4: GESTIÓN Y TAREAS ---
+  clearList('modalSystemsPlanContainer');
+  (p.systemsPlan || []).forEach(sys => addSystemPlan(sys.system, sys.plan));
+  
+  document.getElementById("fieldMedications").value = p.hospitalMedications || "";
 
   modalTempAtbs = Array.isArray(p.antibiotics) ? JSON.parse(JSON.stringify(p.antibiotics)) : [];
   modalTempDevices = Array.isArray(p.devices) ? JSON.parse(JSON.stringify(p.devices)) : [];
@@ -1408,6 +1475,9 @@ function openBedModal(serviceId, roomId, bedId) {
   renderModalAtbList();
   renderModalDevicesList();
   renderModalTasksList();
+
+  // Resetear a la pestaña 1
+  switchBedModalTab('tab-ingreso');
 
   const backdrop = document.getElementById("bedModalBackdrop");
   backdrop.classList.remove("hidden");
@@ -1663,7 +1733,7 @@ function saveBedModal() {
   if (!found || !found.bed) return;
   const { bed } = found;
 
-  // Guardado automático de inputs que hayan quedado escritos sin presionar "+"
+  // Guardado automático de inputs residuales
   if (document.getElementById("newAtbName").value.trim()) addAntibioticToModal();
   if (document.getElementById("modalTaskText").value.trim()) addTaskInsideModal();
   if (document.getElementById("pathogenSearchInput").value.trim()) addCustomPathogenFromInput();
@@ -1678,6 +1748,9 @@ function saveBedModal() {
   bed.isMyBed = document.getElementById("fieldIsMyBed").checked;
   bed.seenToday = document.getElementById("fieldSeenToday").checked;
 
+  const extractVals = (selector) => Array.from(document.querySelectorAll(selector)).map(i => i.value.trim()).filter(Boolean);
+
+  // Reconstrucción del JSON estructurado
   bed.patient = {
     name: patientName,
     rut: document.getElementById("fieldPatientRut").value.trim(),
@@ -1686,16 +1759,84 @@ function saveBedModal() {
     recordNumber: document.getElementById("fieldPatientRecordNumber").value.trim(),
     phone: document.getElementById("fieldPatientPhone").value.trim(),
     address: document.getElementById("fieldPatientAddress").value.trim(),
-    allergies: document.getElementById("fieldPatientAllergies").value.trim(),
-    letStatus: document.getElementById("fieldPatientLet").value,
-    oxygenSupport: document.getElementById("fieldPatientOxygen").value.trim() || "Ambiental",
     admissionDate: document.getElementById("fieldAdmissionDate").value,
     hospDays: Number(document.getElementById("fieldHospDays").value || 1),
-    diagnoses: document.getElementById("fieldDiagnoses").value.trim(),
-    clinicalPlan: document.getElementById("fieldClinicalPlan").value.trim(),
-    labsSummary: document.getElementById("fieldLabsSummary").value.trim(),
-    medications: document.getElementById("fieldMedications").value.trim(),
+
+    allergies: document.getElementById("fieldPatientAllergies").value.trim(),
+    letStatus: document.getElementById("fieldPatientLet").value,
     isolationType: document.getElementById("fieldIsolationType").value,
+    
+    // El soporte de O2 se deriva del CSV para mantener compatibilidad gráfica externa
+    oxygenSupport: document.getElementById("v-o2-tipo").value === "Ambiental" ? "Ambiental" : `${document.getElementById("v-o2-tipo").value} ${document.getElementById("v-o2-lit").value}`,
+
+    medicalHistory: extractVals('#modalMedHistoryList .history-val'),
+    surgicalHistory: extractVals('#modalSurgHistoryList .history-val'),
+    habits: extractVals('#modalHabitsList .history-val'),
+    homeMedications: extractVals('#modalHomeMedsList .history-val'),
+
+    currentSurgeries: Array.from(document.querySelectorAll('.c-surgery-item')).map(item => ({
+      name: item.querySelector('.surg-name').value.trim(),
+      postOpDay: item.querySelector('.surg-dpo').value
+    })).filter(cx => cx.name),
+
+    diagnoses: Array.from(document.querySelectorAll('.c-diag-item')).map(item => ({
+      main: item.querySelector('.diag-main').value.trim(),
+      observations: Array.from(item.querySelectorAll('.obs-val')).map(i => i.value.trim()).filter(Boolean)
+    })).filter(dx => dx.main),
+
+    evolution: {
+      subjective: document.getElementById("evo-sub").value.trim(),
+      currentStatus: document.getElementById("evo-act").value.trim()
+    },
+
+    vitals: {
+      pa: document.getElementById("v-pa").value.trim(),
+      fc: document.getElementById("v-fc").value.trim(),
+      temp: document.getElementById("v-t").value.trim(),
+      fr: document.getElementById("v-fr").value.trim(),
+      sat: document.getElementById("v-sat").value.trim(),
+      o2Type: document.getElementById("v-o2-tipo").value,
+      o2Liters: document.getElementById("v-o2-lit").value.trim(),
+      hgt: document.getElementById("v-hgt").value.trim(),
+      eva: document.getElementById("v-eva").value.trim(),
+      diuresis: document.getElementById("v-diu").value.trim(),
+      bowel: document.getElementById("v-dep").value.trim()
+    },
+
+    physicalExam: {
+      general: document.getElementById("ef-gen").value.trim(),
+      cardiac: document.getElementById("ef-car").value.trim(),
+      pulmonary: document.getElementById("ef-pul").value.trim(),
+      abdomen: document.getElementById("ef-abd").value.trim(),
+      surgicalWound: document.getElementById("ef-ho").value.trim(),
+      lowerLimbs: document.getElementById("ef-eeii").value.trim(),
+      neuro: document.getElementById("ef-neu").value.trim(),
+      others: []
+    },
+
+    labs: Array.from(document.querySelectorAll('.c-lab-block')).map(block => ({
+      date: block.querySelector('.lab-date').value,
+      exams: Array.from(block.querySelectorAll('.c-lab-row')).map(row => ({
+        name: row.querySelector('.lab-name').value.trim(),
+        value: row.querySelector('.lab-val').value.trim(),
+        unit: row.querySelector('.lab-unit').value.trim()
+      })).filter(ex => ex.name && ex.value)
+    })).filter(lab => lab.exams.length > 0),
+
+    images: Array.from(document.querySelectorAll('.c-img-record')).map(img => ({
+      name: img.querySelector('.img-name').value.trim(),
+      date: img.querySelector('.img-date').value,
+      description: img.querySelector('.img-desc').value.trim()
+    })).filter(img => img.name),
+
+    systemsPlan: Array.from(document.querySelectorAll('.c-sys-plan')).map(sys => ({
+      system: sys.querySelector('.sys-name').value,
+      plan: sys.querySelector('.sys-plan').value.trim()
+    })).filter(sys => sys.plan),
+
+    hospitalMedications: document.getElementById("fieldMedications").value.trim(),
+
+    // Vectores dinámicos conservados
     pathogens: [...modalTempPathogens],
     antibiotics: [...modalTempAtbs],
     devices: [...modalTempDevices],
@@ -1705,9 +1846,8 @@ function saveBedModal() {
   saveAppState();
   closeBedModal();
   renderAll();
-  showToast(`💾 Ficha de ${bed.code} guardada`);
+  showToast(`💾 Ficha de ${bed.code} guardada (Estructura v3.0)`);
 }
-
 function vacateCurrentBed() {
   if (!currentEditingRef) return;
   const found = findEntity(currentEditingRef.serviceId, currentEditingRef.roomId, currentEditingRef.bedId);
