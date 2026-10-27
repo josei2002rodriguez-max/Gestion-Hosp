@@ -201,7 +201,12 @@
           <button onclick="openAssignBedsModal()" class="ml-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 flex items-center gap-2 transition hover:bg-indigo-100">
             <span>➕ Asignar Mis Camas</span>
           </button>
+          
+          <button onclick="openBulkExportModal()" class="ml-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:border-sky-800 dark:text-sky-300 flex items-center gap-2 transition hover:bg-sky-100">
+            <span>☁️ Exportar Lote</span>
+          </button>
         </div>
+        
 
         <!-- Search & Filter Controls -->
         <div class="flex flex-wrap items-center gap-2">
@@ -1126,7 +1131,32 @@
 
     </div>
   </div>
+<!-- =========================================================================
+       MODAL 9: EXPORTACIÓN MASIVA A GOOGLE DOCS (COLA DE TRABAJO)
+  ========================================================================== -->
+  <div id="bulkExportModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh]">
+      
+      <div class="px-5 py-4 bg-sky-600 text-white flex items-center justify-between shrink-0">
+        <div>
+          <h3 class="text-base font-bold">☁️ Exportar Lote a Google Docs</h3>
+          <p class="text-xs text-sky-100">Envía múltiples pacientes a la Sala de Espera del Sidebar.</p>
+        </div>
+        <button onclick="closeBulkExportModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+      
+      <div id="bulkExportModalBody" class="p-4 overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 space-y-4">
+        <!-- Contenido generado dinámicamente -->
+      </div>
 
+      <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-between gap-3 shrink-0">
+        <button onclick="closeBulkExportModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700">Cancelar</button>
+        <button onclick="confirmBulkExport()" id="btnConfirmBulk" class="px-5 py-2 rounded-xl text-sm font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-sm flex-1 transition">
+          🚀 Enviar Seleccionados
+        </button>
+      </div>
+    </div>
+  </div>
   <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
