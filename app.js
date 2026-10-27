@@ -3041,8 +3041,22 @@ function hardResetApp() {
   location.reload();
 }
 
+// --- FUNCIONES DE HISTORIAL ACTUALIZADAS ---
+function openHistoryModal() {
+  renderHistorySelect();
+  const backdrop = document.getElementById("historyModalBackdrop");
+  backdrop.classList.remove("hidden");
+  backdrop.classList.add("flex");
+}
+
+function closeHistoryModal() {
+  const backdrop = document.getElementById("historyModalBackdrop");
+  backdrop.classList.add("hidden");
+  backdrop.classList.remove("flex");
+}
+
 function renderHistorySelect() {
-  const sel = document.getElementById("historyRestoreSelect");
+  const sel = document.getElementById("mainHistoryRestoreSelect");
   if (!sel) return;
   if (!appState.history || appState.history.length === 0) {
     sel.innerHTML = `<option value="">No hay respaldos disponibles</option>`;
@@ -3054,7 +3068,7 @@ function renderHistorySelect() {
 }
 
 function restoreFromHistory() {
-  const idStr = document.getElementById("historyRestoreSelect").value;
+  const idStr = document.getElementById("mainHistoryRestoreSelect").value;
   if (!idStr) return;
   const snapshot = appState.history.find(h => h.dateId === Number(idStr));
   if (!snapshot) return;
@@ -3064,6 +3078,6 @@ function restoreFromHistory() {
   appState.services = JSON.parse(JSON.stringify(snapshot.services));
   saveAppState();
   renderAll();
-  closeHospitalConfigModal();
+  closeHistoryModal();
   showToast(`⏱️ Hospital restaurado al ${snapshot.dateLabel}`);
 }
