@@ -3081,3 +3081,154 @@ function restoreFromHistory() {
   closeHistoryModal();
   showToast(`⏱️ Hospital restaurado al ${snapshot.dateLabel}`);
 }
+// =========================================================================
+// WIZARD: ASIGNACIÓN MASIVA DE MIS CAMAS
+// =========================================================================
+
+let tempAssignBeds = new Set();
+let currentAssignStep = 'services'; 
+
+function openAssignBedsModal() {
+  tempAssignBeds.clear();
+  
+  // 1. Pre-cargar las camas que YA están marcadas
+  appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
+    if (b.isMyBed) tempAssignBeds.add(`${s.id}|${r.id}|${b.id}`);
+  })));
+  
+  currentAssignStep = 'services'; 
+  renderAssignBedsModal();
+  
+  const backdrop = document.getElementById("assignBedsModalBackdrop");
+  backdrop.classList.remove("hidden");
+  backdrop.classList.add("flex");
+}
+
+function closeAssignBedsModal() {
+  const backdrop = document.getElementById("assignBedsModalBackdrop");
+  backdrop.classList.add("hidden");
+  backdrop.classList.remove("flex");
+}
+
+function renderAssignBedsModal() {
+  const body = document.getElementById("assignBedsModalBody");
+  let html = "";
+
+  // VISTA 1: LISTADO DE SERVICIOS
+  if (currentAssignStep === 'services') {
+    html += `<div class="p-4 space-y-2">`;
+    html += `<p class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">1. Selecciona un Servicio</p>`;
+    
+    appState.services.forEach(srv => {
+      let selectedCount = 0;
+      let occupiedCount = 0;
+      srv.rooms.forEach(r => r.beds.forEach(b => {
+        if (b.status === 'occupied') {
+          occupiedCount++;
+          if (tempAssignBeds.has(`${srv.id}|${r.id}|${b.id}`)) selectedCount++;
+        }
+      }));
+
+      html += `
+        <button onclick="currentAssignStep = '${srv.id}'; renderAssignBedsModal();" class="w-full p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:border-indigo-400 transition text-left shadow-sm">
+          <div>
+            <div class="font-extrabold text-sm text-slate-900 dark:text-white">${escapeHtml(srv.icon)} ${escapeHtml(srv.name)}</div>
+            <div class="text-xs text-slate-500 mt-0.5">${occupiedCount} camas ocupadas</div>
+          </div>
+          <div class="text-[11px] font-bold ${selectedCount > 0 ? 'text-indigo-700 bg-indigo-100 dark:bg-indigo-900/80 dark:text-indigo-300 px-2 py-1 rounded-lg' : 'text-slate-400'}">
+            ${selectedCount > 0 ? `${selectedCount} marcadas` : 'Ver camas'} ➔
+          </div>
+        </button>
+      `;
+    });
+    html += `</div>`;
+  } 
+  // VISTA 2: LISTADO DE CAMAS POR SERVICIO SELECCIONADO
+  else {
+    const srv = getServiceById(currentAssignStep);
+    
+    html += `
+      <div class="sticky top-0 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur p-3 border-b border-slate-200 dark:border-slate-700 z-10 flex items-center gap-3">
+        <button onclick="currentAssignStep = 'services'; renderAssignBedsModal();" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 shadow-sm hover:bg-slate-50 border border-slate-200 dark:border-slate-600 transition">← Volver</button>
+        <div class="font-extrabold text-sm text-slate-800 dark:text-white">${escapeHtml(srv.icon)} ${escapeHtml(srv.name)}</div>
+      </div>
+      <div class="p-4 space-y-5">
+    `;
+    
+    let hasOccupiedBeds = false;
+
+    srv.rooms.forEach(room => {
+      const occupiedBeds = room.beds.filter(b => b.status === "occupied");
+      if (occupiedBeds.length === 0) return; 
+      
+      hasOccupiedBeds = true;
+
+      html += `<div class="space-y-2">
+        <div class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <span>🚪 ${escapeHtml(room.name)}</span>
+          <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+        </div>
+        <div class="space-y-2">
+      `;
+
+      occupiedBeds.forEach(bed => {
+        const bedKey = `${srv.id}|${room.id}|${bed.id}`;
+        const isChecked = tempAssignBeds.has(bedKey);
+        
+        let diagStr = "Sin diagnóstico";
+        if (Array.isArray(bed.patient?.diagnoses) && bed.patient.diagnoses.length > 0) {
+          diagStr = bed.patient.diagnoses[0].main;
+        } else if (typeof bed.patient?.diagnoses === "string" && bed.patient.diagnoses) {
+          diagStr = bed.patient.diagnoses.split("\n")[0];
+        }
+
+        html += `
+          <label class="flex items-center gap-3 p-3 rounded-xl border ${isChecked ? 'bg-indigo-50 border-indigo-400 dark:bg-indigo-900/30 dark:border-indigo-600 ring-1 ring-indigo-400 dark:ring-indigo-600' : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700'} cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80 transition">
+            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTempAssignBed('${bedKey}')" class="w-5 h-5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 bg-white">
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded shadow-sm ${isChecked ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'} text-[10px]">${escapeHtml(bed.code)}</span>
+                <span class="truncate">${escapeHtml(bed.patient?.name || "Paciente")}</span>
+              </div>
+              <div class="text-[11px] text-slate-500 truncate mt-0.5">${escapeHtml(diagStr)}</div>
+            </div>
+          </label>
+        `;
+      });
+
+      html += `</div></div>`;
+    });
+
+    if (!hasOccupiedBeds) {
+       html += `<div class="text-center text-slate-500 text-xs py-8">No hay camas ocupadas en este servicio.</div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  body.innerHTML = html;
+}
+
+function toggleTempAssignBed(bedKey) {
+  if (tempAssignBeds.has(bedKey)) {
+    tempAssignBeds.delete(bedKey);
+  } else {
+    tempAssignBeds.add(bedKey);
+  }
+  renderAssignBedsModal(); 
+}
+
+function confirmAssignBeds() {
+  let assignedCount = 0;
+  
+  appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
+    const bedKey = `${s.id}|${r.id}|${b.id}`;
+    b.isMyBed = tempAssignBeds.has(bedKey);
+    if (b.isMyBed) assignedCount++;
+  })));
+
+  saveAppState();
+  closeAssignBedsModal();
+  renderAll();
+  showToast(`✅ Visita configurada: Tienes ${assignedCount} paciente(s) a tu cargo hoy.`);
+}
