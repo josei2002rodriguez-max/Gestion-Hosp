@@ -2482,6 +2482,24 @@ function confirmStartNewDay() {
   const incAtb = document.getElementById("newDayIncrementAtb").checked;
   const decTasks = document.getElementById("newDayDecrementTasks").checked;
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // --- NUEVO: Motor de Historial (Snapshot de 10 Días) ---
+  if (!Array.isArray(appState.history)) appState.history = [];
+  
+  // Guardamos la foto exacta del hospital ANTES de mutar los días
+  appState.history.push({
+    dateId: Date.now(),
+    dateLabel: new Date().toLocaleString("es-CL", { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' }),
+    services: JSON.parse(JSON.stringify(appState.services)) // Clonación profunda
+  });
+
+  // Mantenemos estrictamente los últimos 10 turnos
+  if (appState.history.length > 10) {
+    appState.history.shift(); // Elimina el día más antiguo
+  }
+  // -------------------------------------------------------
+
   appState.services.forEach(srv => {
     srv.rooms.forEach(room => {
       room.beds.forEach(bed => {
@@ -2490,7 +2508,6 @@ function confirmStartNewDay() {
           const p = bed.patient;
           if (incHosp) {
             p.hospDays = Number(p.hospDays || 0) + 1;
-            // Suma Días Post-Operatorios automáticamente
             if (Array.isArray(p.currentSurgeries)) {
               p.currentSurgeries.forEach(cx => {
                 if (!isNaN(cx.postOpDay) && cx.postOpDay !== ">30") cx.postOpDay = String(Number(cx.postOpDay) + 1);
@@ -2514,11 +2531,11 @@ function confirmStartNewDay() {
     });
   });
 
-  appState.lastNewDayDate = new Date().toISOString().slice(0, 10);
+  appState.lastNewDayDate = todayStr;
   saveAppState();
   closeNewDayModal();
   renderAll();
-  showToast("☀️ ¡Nuevo Día aplicado en todos los servicios!");
+  showToast("☀️ ¡Nuevo Día aplicado y turno respaldado!");
 }
 
 // Compartir Cama (.md / WhatsApp)
