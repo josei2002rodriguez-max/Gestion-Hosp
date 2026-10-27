@@ -1681,59 +1681,90 @@ function toggleModalTaskDaysInput() {
   document.getElementById("modalTaskDaysNumber").classList.toggle("hidden", val !== "in_days");
 }
 
+// =========================================================================
+// 10. GESTIÓN DE PENDIENTES (TAREAS Y ALERTAS) EN MODAL v3.0
+// =========================================================================
+
+// Esta es la función que faltaba y hacía "chocar" la app
+function toggleTaskDaysInput() {
+  const t = document.getElementById("modalTaskTiming");
+  const d = document.getElementById("modalTaskDays");
+  if (t && d) {
+    if (t.value === "in_days") d.classList.remove("hidden");
+    else d.classList.add("hidden");
+  }
+}
+
 function addTaskInsideModal() {
-  const category = document.getElementById("modalTaskCategory").value;
-  const text = document.getElementById("modalTaskText").value.trim();
-  const timing = document.getElementById("modalTaskTiming").value;
-  const daysNum = Number(document.getElementById("modalTaskDaysNumber").value || 5);
-  const dueTime = document.getElementById("modalTaskDueTime").value || "";
+  const textEl = document.getElementById("modalTaskText");
+  const catEl = document.getElementById("modalTaskCategory");
+  const timeEl = document.getElementById("modalTaskTiming");
+  const daysEl = document.getElementById("modalTaskDays");
+
+  const text = textEl.value.trim();
   if (!text) return;
 
-  modalTempTasks.push({
-    id: "t-" + Date.now(),
-    category,
-    text,
-    timing,
-    daysRemaining: timing === "tomorrow" ? 1 : (timing === "in_days" ? daysNum : 0),
-    dueTime,
+  const task = {
+    id: "tsk_" + Date.now(),
+    text: text,
+    category: catEl ? catEl.value : "General",
+    timing: timeEl ? timeEl.value : "today",
     completed: false,
-    notified: false
-  });
-  document.getElementById("modalTaskText").value = "";
-  document.getElementById("modalTaskDueTime").value = "";
-  renderModalTasksList();
-}
+    daysRemaining: (timeEl && timeEl.value === "in_days" && daysEl) ? Number(daysEl.value || 2) : 0
+  };
 
-function toggleModalTaskCompleted(idx) {
-  if (!modalTempTasks[idx]) return;
-  modalTempTasks[idx].completed = !modalTempTasks[idx].completed;
-  renderModalTasksList();
-}
-
-function removeModalTask(idx) {
-  modalTempTasks.splice(idx, 1);
+  modalTempTasks.push(task);
+  textEl.value = "";
+  if(daysEl) daysEl.value = "";
   renderModalTasksList();
 }
 
 function renderModalTasksList() {
-  const container = document.getElementById("modalTasksList");
-  if (!modalTempTasks.length) {
-    container.innerHTML = `<p class="text-xs text-slate-400">Sin pendientes registrados para esta cama.</p>`;
+  const container = document.getElementById("modalTasksContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (modalTempTasks.length === 0) {
+    container.innerHTML = `<p class="text-xs text-slate-500 italic p-2 text-center">No hay pendientes registrados.</p>`;
     return;
   }
-  container.innerHTML = modalTempTasks.map((t, idx) => `
-    <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-200/70 dark:border-rose-800/60 text-xs">
-      <label class="flex items-center gap-2 cursor-pointer min-w-0">
-        <input type="checkbox" ${t.completed ? "checked" : ""} onchange="toggleModalTaskCompleted(${idx})" class="w-4 h-4 rounded text-teal-600" />
-        <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-[10px]">${escapeHtml(t.category)}</span>
-        <span class="${t.completed ? 'line-through text-slate-400' : 'font-semibold'} truncate">${escapeHtml(t.text)}</span>
-        ${formatTaskTimingBadge(t)}
-      </label>
-      <button type="button" onclick="removeModalTask(${idx})" class="text-slate-400 hover:text-rose-600">✕</button>
-    </div>
-  `).join("");
+
+  modalTempTasks.forEach((t, i) => {
+    const bg = t.completed ? "bg-slate-50 dark:bg-slate-800/50 opacity-60" : "bg-white dark:bg-slate-800";
+    const textDeco = t.completed ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-200 font-medium";
+
+    let timeBadge = "";
+    if (!t.completed) {
+        if (t.timing === "today") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold">Hoy</span>`;
+        else if (t.timing === "tomorrow") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-bold">Mañana</span>`;
+        else if (t.timing === "in_days") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-bold">En ${t.daysRemaining || 1}d</span>`;
+    }
+
+    container.insertAdjacentHTML('beforeend', `
+      <div class="flex items-center justify-between p-2 mb-1.5 border border-slate-200 dark:border-slate-700 rounded-lg ${bg}">
+        <div class="flex items-center gap-2 overflow-hidden">
+          <input type="checkbox" ${t.completed ? "checked" : ""} onchange="toggleModalTask(${i})" class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer shrink-0">
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">${escapeHtml(t.category)}</span>
+          <span class="text-xs truncate ${textDeco}">${escapeHtml(t.text)}</span>
+          ${timeBadge}
+        </div>
+        <button type="button" onclick="deleteModalTask(${i})" class="text-rose-400 hover:text-rose-600 font-bold px-2 py-0.5 shrink-0">✕</button>
+      </div>
+    `);
+  });
 }
 
+function toggleModalTask(index) {
+  if(modalTempTasks[index]) {
+    modalTempTasks[index].completed = !modalTempTasks[index].completed;
+    renderModalTasksList();
+  }
+}
+
+function deleteModalTask(index) {
+  modalTempTasks.splice(index, 1);
+  renderModalTasksList();
+}
 function saveBedModal() {
   if (!currentEditingRef) return;
   const found = findEntity(currentEditingRef.serviceId, currentEditingRef.roomId, currentEditingRef.bedId);
