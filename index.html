@@ -136,16 +136,16 @@
           </button>
 
           <!-- Notification Drawer Popover (AHORA CORREGIDO CON MAX-H Y OVERFLOW) -->
-          <div id="notificationDrawer" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 max-h-[70vh] overflow-y-auto transform origin-top-right transition-all">
-            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10">
-              <span class="text-xs font-extrabold uppercase tracking-wider">🔔 Alertas y Recordatorios</span>
-              <button onclick="requestBrowserNotificationPermission()" id="enableBrowserNotifBtn" class="text-[11px] px-2 py-0.5 rounded bg-teal-600 hover:bg-teal-500 font-semibold">
+          <!-- Notification Drawer Popover -->
+          <div id="notificationDrawer" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto overscroll-contain transform origin-top-right transition-all">
+            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10 shadow-md">
+              <span class="text-xs font-extrabold uppercase tracking-wider">🔔 Alertas</span>
+              <button onclick="requestBrowserNotificationPermission()" id="enableBrowserNotifBtn" class="text-[11px] px-2 py-0.5 rounded bg-teal-600 hover:bg-teal-500 font-semibold transition">
                 Activar avisos
               </button>
             </div>
             <div id="notificationListContainer" class="divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1"></div>
           </div>
-        </div>
 
         <button onclick="openNewDayModal()" class="px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/70 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80 flex items-center gap-1.5 transition" title="Avanzar +1 día de hospitalización, ATB y dispositivos">
           <span>☀️ Nuevo Día</span>
