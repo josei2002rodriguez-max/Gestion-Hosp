@@ -222,7 +222,7 @@ function renderAll() {
       room.beds.forEach(bed => {
         totalBeds++;
         if (bed.status === "occupied") occupiedBeds++;
-        if (bed.isMyBed && bed.status === "occupied") {
+        if (bed.isMyBed) {
           myBedsTotal++;
           if (bed.seenToday) myBedsSeen++;
         }
@@ -860,7 +860,7 @@ function renderMyBedsView() {
   appState.services.forEach(service => {
     service.rooms.forEach(room => {
       room.beds.forEach(bed => {
-        if (bed.isMyBed && bed.status === "occupied") {
+        if (bed.isMyBed) {
           myBedsList.push({ service, room, bed });
         }
       });
@@ -3121,19 +3121,17 @@ function renderAssignBedsModal() {
     
     appState.services.forEach(srv => {
       let selectedCount = 0;
-      let occupiedCount = 0;
+      let totalCount = 0;
       srv.rooms.forEach(r => r.beds.forEach(b => {
-        if (b.status === 'occupied') {
-          occupiedCount++;
-          if (tempAssignBeds.has(`${srv.id}|${r.id}|${b.id}`)) selectedCount++;
-        }
+        totalCount++;
+        if (tempAssignBeds.has(`${srv.id}|${r.id}|${b.id}`)) selectedCount++;
       }));
 
       html += `
-        <button onclick="currentAssignStep = '${srv.id}'; renderAssignBedsModal();" class="w-full p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:border-indigo-400 transition text-left shadow-sm">
+        <button onclick="currentAssignStep = '${srv.id}'; renderAssignBedsModal();" class="w-full p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:border-indigo-400 dark:hover:border-indigo-500 transition text-left shadow-sm">
           <div>
             <div class="font-extrabold text-sm text-slate-900 dark:text-white">${escapeHtml(srv.icon)} ${escapeHtml(srv.name)}</div>
-            <div class="text-xs text-slate-500 mt-0.5">${occupiedCount} camas ocupadas</div>
+            <div class="text-xs text-slate-500 mt-0.5">${totalCount} camas totales en el servicio</div>
           </div>
           <div class="text-[11px] font-bold ${selectedCount > 0 ? 'text-indigo-700 bg-indigo-100 dark:bg-indigo-900/80 dark:text-indigo-300 px-2 py-1 rounded-lg' : 'text-slate-400'}">
             ${selectedCount > 0 ? `${selectedCount} marcadas` : 'Ver camas'} ➔
@@ -3155,13 +3153,11 @@ function renderAssignBedsModal() {
       <div class="p-4 space-y-5">
     `;
     
-    let hasOccupiedBeds = false;
+    let hasBeds = false;
 
     srv.rooms.forEach(room => {
-      const occupiedBeds = room.beds.filter(b => b.status === "occupied");
-      if (occupiedBeds.length === 0) return; 
-      
-      hasOccupiedBeds = true;
+      if (room.beds.length === 0) return; 
+      hasBeds = true;
 
       html += `<div class="space-y-2">
         <div class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-2">
@@ -3171,15 +3167,22 @@ function renderAssignBedsModal() {
         <div class="space-y-2">
       `;
 
-      occupiedBeds.forEach(bed => {
+      room.beds.forEach(bed => {
         const bedKey = `${srv.id}|${room.id}|${bed.id}`;
         const isChecked = tempAssignBeds.has(bedKey);
+        const isOccupied = bed.status === "occupied";
         
-        let diagStr = "Sin diagnóstico";
-        if (Array.isArray(bed.patient?.diagnoses) && bed.patient.diagnoses.length > 0) {
-          diagStr = bed.patient.diagnoses[0].main;
-        } else if (typeof bed.patient?.diagnoses === "string" && bed.patient.diagnoses) {
-          diagStr = bed.patient.diagnoses.split("\n")[0];
+        let patName = "🟢 Cama Libre";
+        let diagStr = "Vacía (Márcala para ingresar paciente después)";
+        
+        if (isOccupied) {
+          patName = bed.patient?.name || "Paciente sin nombre";
+          diagStr = "Sin diagnóstico";
+          if (Array.isArray(bed.patient?.diagnoses) && bed.patient.diagnoses.length > 0) {
+            diagStr = bed.patient.diagnoses[0].main;
+          } else if (typeof bed.patient?.diagnoses === "string" && bed.patient.diagnoses) {
+            diagStr = bed.patient.diagnoses.split("\n")[0];
+          }
         }
 
         html += `
@@ -3188,9 +3191,9 @@ function renderAssignBedsModal() {
             <div class="flex-1 min-w-0">
               <div class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded shadow-sm ${isChecked ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'} text-[10px]">${escapeHtml(bed.code)}</span>
-                <span class="truncate">${escapeHtml(bed.patient?.name || "Paciente")}</span>
+                <span class="truncate">${escapeHtml(patName)}</span>
               </div>
-              <div class="text-[11px] text-slate-500 truncate mt-0.5">${escapeHtml(diagStr)}</div>
+              <div class="text-[11px] ${isOccupied ? 'text-slate-500' : 'text-emerald-600 font-bold'} truncate mt-0.5">${escapeHtml(diagStr)}</div>
             </div>
           </label>
         `;
@@ -3199,8 +3202,8 @@ function renderAssignBedsModal() {
       html += `</div></div>`;
     });
 
-    if (!hasOccupiedBeds) {
-       html += `<div class="text-center text-slate-500 text-xs py-8">No hay camas ocupadas en este servicio.</div>`;
+    if (!hasBeds) {
+       html += `<div class="text-center text-slate-500 text-xs py-8">No hay camas creadas en este servicio.</div>`;
     }
 
     html += `</div>`;
