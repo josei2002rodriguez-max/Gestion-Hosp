@@ -1,7 +1,9 @@
+
 // =========================================================================
-// MEDIPISO v3.0 — CATÁLOGOS CLÍNICOS Y DATOS BASE
+// MEDIPISO v3.0 — CATÁLOGOS CLÍNICOS Y DATOS BASE ESTRUCTURADOS
 // =========================================================================
 
+// --- 1. CATÁLOGOS IMPORTADOS DEL ASISTENTE GOOGLE DOCS ---
 const CATALOGO_DIAGNOSTICOS = [
   "Apendicitis aguda", "Colelitiasis", "Colecistitis aguda", "Hernia inguinal no complicada", "Hernia inguinal atascada", 
   "Hernia umbilical", "Hernia incisional / Eventración", "Obstrucción intestinal", "Íleo paralítico", "Peritonitis", 
@@ -35,6 +37,34 @@ const CATALOGO_FARMACOS = [
   "Fluconazol", "Clotrimazol", "Nistatina", "Aciclovir", "Valaciclovir", "Oseltamivir", "Tamsulosina", "Dutasterida", "Finasterida", 
   "Sildenafil", "Tadalafilo", "Alendronato", "Ibandronato", "Calcio", "Vitamina D", "Fierro", "Ácido Fólico", "Vitamina B12"
 ];
+
+const CATALOGO_ENFERMEDADES = [
+  "HTA", "DM2", "DM1", "Resistencia a la Insulina", "DLP", "Hipotiroidismo", "Hipertiroidismo", "ERC", "EPOC", "Asma", "ICC", "ACV", "IAM", "Arritmia / FA", "Obesidad", "SAHOS", "Anemia", "Artritis Reumatoide", "Cáncer", "Depresión", "Ansiedad"
+];
+
+const CATALOGO_CIRUGIAS = [
+  "Apendicectomía Laparoscópica", "Apendicectomía Abierta", "Colecistectomía Laparoscópica", "Colecistectomía Abierta", "Hernioplastia Inguinal Lichtenstein", "Hernioplastia Inguinal Laparoscópica (TAPP)", "Hernioplastia Inguinal (TEP)", "Hernioplastia Umbilical", "Hernioplastia Incisional / Eventroplastia con malla", "Laparotomía Exploradora", "Laparoscopía Diagnóstica", "Resección Intestinal y Anastomosis", "Hemicolectomía Derecha", "Hemicolectomía Izquierda", "Sigmooidectomía", "Operación de Hartmann", "Reconstitución de Tránsito (Cierre de Hartmann)", "Colostomía en Asa", "Colostomía Terminal", "Ileostomía en Asa", "Cierre de Ileostomía", "Gastrectomía Subtotal", "Gastrectomía Total", "Bypass Gástrico en Y de Roux", "Manga Gástrica", "Esofagectomía", "Funduplicatura Nissen", "Hemorroidectomía Milligan-Morgan", "Fisurectomía Anal", "Fistulectomía / Fopistulotomía Anal", "Drenaje de Absceso Perianal", "Quiste Pilonidal (Resección)", "Exploración de Vía Biliar + Sonda Kehr", "Coledocostomía", "Anastomosis Biliodigestiva (Coledocoduodeno/Hepático-Yeyuno)", "Hepatectomía Parcial / Segmentectomía", "Drenaje Percutáneo de Absceso Hepático", "Quistectomía Hidatídica", "Pancreatectomía Distal", "Duodenopancreatectomía Cefálica (Whipple)", "Necrosectomía Pancreática", "Sutura de Úlcera Perforada / Parche de Graham", "Lavado y Aseo Peritoneal", "Instalación de Sistema de Presión Negativa (ABThera/VAC)", "Esplenectomía de Urgencia", "Empaquetamiento Abdominal (Packing)", "Desbridamiento y Aseo Quirúrgico de Partes Blandas", "Safenectomía / Flebectomías", "Bypass Fémoro-Poplíteo", "Trombectomía / Embolectomía Arterial", "Endarterectomía Carotídea", "Reparación de Aneurisma de Aorta Abdominal (Abierta)", "EVAR (Endoprótesis de Aorta)", "Fístula Arteriovenosa (FAV) para hemodiálisis", "Amputación de Ortejo", "Amputación Transmetatarsiana", "Amputación Infracondílea (Transtibial)", "Amputación Supracondílea (Transfemoral)", "Amputación de Extremidad Superior", "Fasciotomía de Extremidad", "Instalación de Tubo de Drenaje Pleural (Pleurostomía)", "Toracotomía Exploradora", "Toracoscopía / VATS", "Lobectomía Pulmonar", "Resección en Cuña Pulmonar", "Pleurodesis Química", "Ventana Pericárdica", "Prostatectomía Abierta", "Resección Transuretral de Próstata (RTU-P)", "Resección Transuretral de Tumor Vesical (RTU-V)", "Nefrectomía Total", "Nefrectomía Parcial", "Instalación de Catéter Doble J", "Retiro de Catéter Doble J", "Ureterolitectomía / Ureteroscopía", "Nefrolitotomía Percutánea", "Orquiectomía Radical", "Varicocelectomía", "Circuncisión", "Cistostomía Abierta / Percutánea", "Cesárea", "Histerectomía Total Abdominal", "Histerectomía Vaginal", "Histerectomía Laparoscópica", "Salpingooforectomía", "Legrado Uterino Ginecológico", "Mastectomía Parcial / Cuadrantectomía", "Mastectomía Total", "Biopsia de Ganglio Centinela", "Linfadenectomía Axilar", "Tiroidectomía Total", "Tiroidectomía Parcial / Hemitiroidectomía", "Paratiroidectomía", "Traqueostomía Quirúrgica / Percutánea", "Amigdalectomía", "Resección de Quiste Tirogloso", "Escarectomía + Injerto Dermoepidérmico", "Colgajo Cutáneo / Fasciocutáneo", "Osteosíntesis de Tobillo", "Osteosíntesis de Fémur (Enclavado Endomedular)", "Osteosíntesis de Cadera (DHS / Clavo Cefalomedular)", "Osteosíntesis de Muñeca / Radio", "Osteosíntesis de Húmero", "Artroplastia Total de Cadera", "Artroplastia Parcial de Cadera", "Artroplastia Total de Rodilla", "Artroscopía de Rodilla / Meniscectomía", "Túnel Carpiano (Liberación)"
+];
+
+const CATALOGO_HABITOS = [
+  "Tabaquismo Activo", "Tabaquismo Suspendido", "Tabaquismo Negativo", "IPA: ", "Alcohol Ocasional", "Alcohol Social", "Consumo Perjudicial de Alcohol", "Bebedor Excesivo", "OH Abstinencia", "Cannabis Ocasional", "Cannabis Frecuente", "Cocaína", "Pasta Base", "Benzodiacepinas sin indicación", "Opioides no médicos", "Negador de hábitos tóxicos"
+];
+
+const CATALOGO_IMAGENES = [
+  "Rx Tórax AP/L", "Rx Abdomen simple", "Rx Pelvis", "Rx Extremidad", "Eco Abdomen", "Eco Pelvis", "Eco Partes Blandas", "Eco Doppler Venoso EEII", "Eco Doppler Arterial EEII", "TAC Cerebro", "TAC Cuello", "TAC Tórax", "TAC Abdomen y Pelvis", "AngioTAC Pulmonar (TEP)", "AngioTAC Aorta", "RM Cerebro", "RM Columna", "RM Abdomen", "RM Pelvis", "ColangioRM"
+];
+
+const CATALOGO_EXAMENES = {
+  "Ácido úrico": "mg/dL", "Albúmina": "g/dL", "Amilasa": "U/L", "Lipasa": "U/L", "Amonio": "µg/dL",
+  "Deshidrogenasa Láctica Total (LDH)": "U/L", "Bilirrubina Total": "mg/dL", "Calcio": "mg/dL",
+  "Colesterol": "mg/dL", "Creatinina": "mg/dL", "CK": "U/L", "CK-MB": "U/L", "Troponina I": "ng/mL",
+  "ELP (Na, K, Cl)": "mEq/L", "Fosfatasa Alcalina": "U/L", "Fósforo": "mg/dL", "GGT": "U/L",
+  "GPT/ALAT": "U/L", "GOT/ASAT": "U/L", "Glicemia": "mg/dL", "HbA1c": "%", "BUN, Nitrógeno": "mg/dL",
+  "Triglicéridos": "mg/dL", "Magnesio": "mg/dL", "Gases Arteriales": "pH, mmHg", "Ácido Láctico": "mmol/L",
+  "Hemograma": "%, g/dL, /mm³", "VHS": "mm/h", "Tiempo de protrombina (INR)": "Seg./INR",
+  "Dímero D": "µg/mL", "TTPK": "Segundos", "Orina Completa": "Dens., pH", "Proteína C reactiva (PCR)": "mg/L",
+  "Procalcitonina": "ng/mL"
+};
 
 const HOSPITAL_PATHOGENS_DB = [
   // --- ENTEROBACTERALES GRAM NEGATIVOS Y FENOTIPOS MDR (1 - 55) ---
@@ -258,8 +288,10 @@ const COMMON_ATB_LIST = [
   "Caspofungina", "Anfotericina B Liposomal", "Aciclovir", "Ganciclovir", "Oseltamivir"
 ];
 
+// --- 2. NUEVA ESTRUCTURA GRANULAR DEL JSON DE PACIENTES ---
 function createEmptyPatient() {
   return {
+    // 1. IDENTIFICACIÓN Y DEMOGRAFÍA
     name: "",
     rut: "",
     dob: "",
@@ -267,16 +299,67 @@ function createEmptyPatient() {
     recordNumber: "",
     phone: "",
     address: "",
-    allergies: "",
-    letStatus: "Full / Sin restricción",
-    oxygenSupport: "Ambiental",
     admissionDate: new Date().toISOString().slice(0, 10),
     hospDays: 1,
-    diagnoses: "",
-    clinicalPlan: "",
-    labsSummary: "",
-    medications: "",
+
+    // 2. ALERTAS Y SOPORTE
+    allergies: "",
+    letStatus: "Full / Sin restricción",
     isolationType: "none",
+    oxygenSupport: "Ambiental",
+
+    // 3. ANTECEDENTES (Estructurados)
+    medicalHistory: [],
+    surgicalHistory: [],
+    habits: [],
+    homeMedications: [],
+
+    // 4. DIAGNÓSTICOS Y CIRUGÍAS ACTUALES
+    currentSurgeries: [], 
+    diagnoses: [],
+
+    // 5. RESUMEN Y EVOLUCIÓN
+    evolution: {
+      subjective: "",
+      currentStatus: ""
+    },
+
+    // 6. SIGNOS VITALES Y FLUIDOS
+    vitals: {
+      pa: "",
+      fc: "",
+      temp: "",
+      fr: "",
+      sat: "",
+      o2Type: "Ambiental",
+      o2Liters: "",
+      hgt: "",
+      eva: "",
+      diuresis: "(+)",
+      bowel: "(+)"
+    },
+
+    // 7. EXAMEN FÍSICO
+    physicalExam: {
+      general: "",
+      cardiac: "",
+      pulmonary: "",
+      abdomen: "",
+      surgicalWound: "",
+      lowerLimbs: "",
+      neuro: "",
+      others: []
+    },
+
+    // 8. EXÁMENES E IMÁGENES
+    labs: [],
+    images: [],
+
+    // 9. PLANES POR SISTEMA Y FÁRMACOS ACTIVOS
+    systemsPlan: [],
+    hospitalMedications: "",
+
+    // 10. GESTIÓN INTERNA MEDIPISO (No se exportan a Docs)
     pathogens: [],
     antibiotics: [],
     devices: [], 
@@ -284,7 +367,7 @@ function createEmptyPatient() {
   };
 }
 
-// Helper para crear un Servicio con salas y numeración continua (1 a N)
+// --- 3. GENERADOR DE HOSPITAL Y PACIENTES DE DEMO (ACTUALIZADOS AL NUEVO JSON) ---
 function buildServiceWithCorrelativeRooms(id, name, icon, color, startNumber, roomSizesArray) {
   let currentBedNum = startNumber || 1;
   const rooms = roomSizesArray.map((bedCount, idx) => {
@@ -296,7 +379,7 @@ function buildServiceWithCorrelativeRooms(id, name, icon, color, startNumber, ro
         number: currentBedNum,
         code: `Cama ${currentBedNum}`,
         status: "free",
-        patientServiceId: id, // Servicio dueño clínico del paciente
+        patientServiceId: id,
         isMyBed: false,
         seenToday: false,
         patient: createEmptyPatient()
@@ -312,164 +395,72 @@ function buildServiceWithCorrelativeRooms(id, name, icon, color, startNumber, ro
     };
   });
 
-  return {
-    id,
-    name,
-    icon: icon || "🏥",
-    color: color || "teal",
-    continuousNumbering: true,
-    startBedNumber: startNumber || 1,
-    rooms
-  };
+  return { id, name, icon: icon || "🏥", color: color || "teal", continuousNumbering: true, startBedNumber: startNumber || 1, rooms };
 }
 
 function generateDefaultHospitalState() {
-  const today = new Date().toISOString().slice(0, 10);
-
-  // 1. Servicio de Cirugía (Ejemplo correlativo: Sala 1 [1-6], Sala 2 [7-12], Sala 3 Aislamiento [13-14], Sala 4 [15-20])
   const srvCirugia = buildServiceWithCorrelativeRooms("srv-cirugia", "Cirugía", "🔪", "teal", 1, [6, 6, 2, 6]);
   srvCirugia.rooms[2].name = "Sala 3 (Aislamiento)";
   srvCirugia.rooms[2].roomIsolation = "cohorte_contacto";
   srvCirugia.rooms[2].roomIsolationNote = "Precaución de Contacto";
 
-  // Poblar pacientes de ejemplo en Cirugía
-  const cBed1 = srvCirugia.rooms[0].beds[0]; // Cama 1
-  cBed1.status = "occupied";
-  cBed1.isMyBed = true;
-  cBed1.seenToday = false;
+  // --- Paciente Demo 1: Actualizado a la nueva estructura ---
+  const cBed1 = srvCirugia.rooms[0].beds[0];
+  cBed1.status = "occupied"; cBed1.isMyBed = true; cBed1.seenToday = false;
   cBed1.patient = {
     ...createEmptyPatient(),
-    name: "Roberto Carlos Muñoz Tapia",
-    rut: "9.412.883-4",
-    dob: "1956-04-14",
-    age: 70,
-    recordNumber: "FC-448219",
-    phone: "+56 9 9123 4567 (Esposa: Rosa)",
-    address: "San Fernando",
-    allergies: "Alergia a Penicilina (Rash)",
-    letStatus: "Full / Sin restricción",
-    oxygenSupport: "Naricera 2L",
-    admissionDate: "2026-10-20",
-    hospDays: 5,
-    diagnoses: "1. Colecistitis aguda litiásica operada (Colelap difícil)\n2. HTA crónica / DM2",
-    clinicalPlan: "Evolución favorable, afebril, drenaje tubular serohemático escaso (20cc). Evaluar retiro de drenaje mañana.",
-    labsSummary: "GB 9.400 | PCR 42 (en descenso) | Crea 0.9 | Bilirrubina T 1.1",
-    medications: "- Enoxaparina 40mg SC día\n- Omeprazol 20mg EV día\n- Metamizol 1g EV c/8h",
-    isolationType: "none",
+    name: "Roberto Carlos Muñoz Tapia", rut: "9.412.883-4", dob: "1956-04-14", age: 70, recordNumber: "FC-448219", phone: "+56 9 9123 4567 (Esposa: Rosa)", address: "San Fernando",
+    allergies: "Alergia a Penicilina (Rash)", letStatus: "Full / Sin restricción", isolationType: "none", oxygenSupport: "Naricera 2L",
+    admissionDate: "2026-10-20", hospDays: 5,
+    medicalHistory: ["HTA", "DM2"], surgicalHistory: [], habits: ["Tabaquismo Suspendido"], homeMedications: ["Losartán"],
+    currentSurgeries: [ { name: "Colecistectomía Laparoscópica", postOpDay: "2" } ],
+    diagnoses: [ { main: "Colecistitis aguda litiásica", observations: ["Colelap difícil"] } ],
+    evolution: { subjective: "Evolución favorable, afebril, drenaje tubular serohemático escaso (20cc).", currentStatus: "Evaluar retiro de drenaje mañana." },
+    vitals: { pa: "130/80", fc: "82", temp: "36.8", fr: "16", sat: "96", o2Type: "Naricera", o2Liters: "2L", hgt: "110", eva: "2", diuresis: "(+)", bowel: "(-)" },
+    physicalExam: { general: "Vigil, orientado, cooperador.", cardiac: "RR2T sin soplos.", pulmonary: "MP(+) sin agregados.", abdomen: "Blando, depresible.", surgicalWound: "Apósitos limpios y secos.", lowerLimbs: "Sin edemas.", neuro: "Sin focalidad.", others: [] },
+    labs: [ { date: "2026-10-27", exams: [ {name: "GB", value: "9.400", unit: "/mm³"}, {name: "PCR", value: "42", unit: "mg/L"} ] } ],
+    systemsPlan: [ { system: "QUIRÚRGICO", plan: "Mantener drenaje, retiro probable mañana." } ],
+    hospitalMedications: "- Enoxaparina 40mg SC día\n- Omeprazol 20mg EV día\n- Metamizol 1g EV c/8h",
     pathogens: ["Escherichia coli Uropatógena (UPEC)"],
-    antibiotics: [
-      { id: "atb-1", name: "Ceftriaxona", dose: "2g c/24h EV", currentDay: 5, targetDays: 7 },
-      { id: "atb-2", name: "Metronidazol", dose: "500mg c/8h EV", currentDay: 5, targetDays: 7 }
-    ],
-    devices: [
-      { id: "dev-1", name: "VVP", days: 3 },
-      { id: "dev-2", name: "Drenaje", days: 4 }
-    ],
-    tasks: [
-      { id: "t-1", category: "Imágenes", text: "Revisar ecografía abdominal de control", timing: "today", daysRemaining: 0, dueTime: "11:30", completed: false, notified: false },
-      { id: "t-2", category: "Procedimiento", text: "Retirar puntos / control en policlínico", timing: "in_days", daysRemaining: 5, dueTime: "", completed: false, notified: false }
-    ]
+    antibiotics: [ { id: "atb-1", name: "Ceftriaxona", dose: "2g c/24h EV", currentDay: 5, targetDays: 7 }, { id: "atb-2", name: "Metronidazol", dose: "500mg c/8h EV", currentDay: 5, targetDays: 7 } ],
+    devices: [ { id: "dev-1", name: "VVP", days: 3 }, { id: "dev-2", name: "Drenaje", days: 4 } ],
+    tasks: [ { id: "t-1", category: "Imágenes", text: "Revisar ecografía abdominal de control", timing: "today", daysRemaining: 0, dueTime: "11:30", completed: false, notified: false } ]
   };
 
-  // Paciente en Sala 2 (Cama 7 - correlativa)
-  const cBed7 = srvCirugia.rooms[1].beds[0]; // Cama 7
-  cBed7.status = "occupied";
-  cBed7.isMyBed = true;
-  cBed7.seenToday = true;
+  // --- Paciente Demo 2: Actualizado a la nueva estructura ---
+  const cBed7 = srvCirugia.rooms[1].beds[0];
+  cBed7.status = "occupied"; cBed7.isMyBed = true; cBed7.seenToday = true;
   cBed7.patient = {
     ...createEmptyPatient(),
-    name: "Jorge Luis Valenzuela Pino",
-    rut: "11.829.301-K",
-    dob: "1964-08-22",
-    age: 62,
-    recordNumber: "FC-501923",
-    phone: "+56 9 8442 1190 (Hijo: Matías)",
-    address: "Av. Manso de Velasco 780, San Fernando",
-    allergies: "No conocidas (RAM (-))",
-    letStatus: "Full / Sin restricción",
-    oxygenSupport: "Ambiental",
-    admissionDate: "2026-10-22",
-    hospDays: 3,
-    diagnoses: "1. Obstrucción intestinal por bridas en manejo médico\n2. LRA prerrenal resuelta",
-    clinicalPlan: "Con SNG a caída libre dando 150cc bilioso claro. Tránsito para gases (+). Probar régimen líquido hoy.",
-    labsSummary: "Na 138 | K 4.1 | Crea 1.0 | PCR 18",
-    medications: "- SF 0.9% 1500cc/24h\n- Enoxaparina 40mg SC\n- Ondansetrón 4mg EV SOS",
-    isolationType: "none",
-    pathogens: [],
-    antibiotics: [],
-    devices: [
-      { id: "dev-3", name: "SNG", days: 3 },
-      { id: "dev-4", name: "Foley (CUP)", days: 3 }
-    ],
-    tasks: [
-      { id: "t-3", category: "Imágenes", text: "Pedir Rx abdomen simple si reaparece dolor", timing: "later", daysRemaining: 0, dueTime: "15:00", completed: false, notified: false }
-    ]
+    name: "Jorge Luis Valenzuela Pino", rut: "11.829.301-K", dob: "1964-08-22", age: 62, recordNumber: "FC-501923", phone: "+56 9 8442 1190 (Hijo: Matías)", address: "San Fernando",
+    allergies: "No conocidas (RAM (-))", letStatus: "Full / Sin restricción", isolationType: "none", oxygenSupport: "Ambiental",
+    admissionDate: "2026-10-22", hospDays: 3,
+    medicalHistory: ["LRA prerrenal resuelta"], surgicalHistory: [], habits: [], homeMedications: [],
+    currentSurgeries: [],
+    diagnoses: [ { main: "Obstrucción intestinal por bridas en manejo médico", observations: [] } ],
+    evolution: { subjective: "Con SNG a caída libre dando 150cc bilioso claro.", currentStatus: "Tránsito para gases (+). Probar régimen líquido hoy." },
+    vitals: { pa: "120/75", fc: "78", temp: "36.5", fr: "14", sat: "98", o2Type: "Ambiental", o2Liters: "", hgt: "", eva: "4", diuresis: "1500cc", bowel: "(-)" },
+    physicalExam: { general: "Buenas condiciones generales.", cardiac: "", pulmonary: "", abdomen: "Distendido, RHA presentes.", surgicalWound: "", lowerLimbs: "", neuro: "", others: [] },
+    labs: [ { date: "2026-10-26", exams: [ {name: "Na", value: "138", unit: "mEq/L"}, {name: "K", value: "4.1", unit: "mEq/L"}, {name: "Crea", value: "1.0", unit: "mg/dL"} ] } ],
+    systemsPlan: [],
+    hospitalMedications: "- SF 0.9% 1500cc/24h\n- Enoxaparina 40mg SC\n- Ondansetrón 4mg EV SOS",
+    pathogens: [], antibiotics: [],
+    devices: [ { id: "dev-3", name: "SNG", days: 3 }, { id: "dev-4", name: "Foley (CUP)", days: 3 } ],
+    tasks: [ { id: "t-3", category: "Imágenes", text: "Pedir Rx abdomen simple si reaparece dolor", timing: "later", daysRemaining: 0, dueTime: "15:00", completed: false, notified: false } ]
   };
 
-  // Paciente en Sala 3 Aislamiento (Cama 13 - correlativa)
-  const cBed13 = srvCirugia.rooms[2].beds[0]; // Cama 13
-  cBed13.status = "occupied";
-  cBed13.isMyBed = true;
-  cBed13.seenToday = false;
-  cBed13.patient = {
-    ...createEmptyPatient(),
-    name: "Carmen Gloria Contreras Silva",
-    rut: "7.882.410-5",
-    dob: "1948-11-03",
-    age: 77,
-    recordNumber: "FC-319482",
-    phone: "+56 9 6554 9981 (Sobrina: Andrea)",
-    address: "Santa Cruz",
-    allergies: "Sulfa",
-    letStatus: "LET: No RCP / No IOT",
-    oxygenSupport: "Naricera 1L",
-    admissionDate: "2026-10-18",
-    hospDays: 7,
-    diagnoses: "1. Pie diabético infectado Wagner III post aseo quirúrgico\n2. Colonización/Infección por K. pneumoniae KPC\n3. ERC Etapa 4",
-    clinicalPlan: "Herida operatoria limpia con tejido granulatorio. Vigilar función renal con antibiótico.",
-    labsSummary: "Hb 9.8 | GB 11.200 | PCR 65 | Crea 2.3 | K 4.6",
-    medications: "- Insulina NPH 14 UI AM / 6 UI PM\n- Atorvastatina 20mg VO\n- Losartán 50mg VO",
-    isolationType: "contacto",
-    pathogens: ["Klebsiella pneumoniae KPC (Carbapenemasa)"],
-    antibiotics: [
-      { id: "atb-4", name: "Ceftazidima/Avibactam", dose: "1.25g c/8h EV", currentDay: 7, targetDays: 7 }
-    ],
-    devices: [
-      { id: "dev-5", name: "CVC", days: 6 }
-    ],
-    tasks: [
-      { id: "t-5", category: "Laboratorio", text: "Rescatar cultivo de tejido profundo", timing: "today", daysRemaining: 0, dueTime: "12:00", completed: false, notified: false }
-    ]
-  };
-
-  // 2. Servicio de Medicina Interna (Camas 1 a 16 en 4 salas de 4)
   const srvMedicina = buildServiceWithCorrelativeRooms("srv-medicina", "Medicina Interna", "🩺", "indigo", 1, [4, 4, 4, 4]);
-
-  // 3. Servicio UTI (Camas 1 a 8 en 2 salas de 4)
   const srvUti = buildServiceWithCorrelativeRooms("srv-uti", "UTI", "⚡", "amber", 1, [4, 4]);
-
-  // 4. Servicio UCI (Camas 1 a 6 en 1 sala de 6 boxes)
   const srvUci = buildServiceWithCorrelativeRooms("srv-uci", "UCI", "🚨", "rose", 1, [6]);
   srvUci.rooms[0].name = "Boxes UCI (1 al 6)";
-
-  // 5. Servicio Traumatología (Camas 1 a 12 en 3 salas de 4)
   const srvTrauma = buildServiceWithCorrelativeRooms("srv-trauma", "Traumatología", "🦴", "cyan", 1, [4, 4, 4]);
 
   return {
     version: "3.0",
     hospitalName: "Hospital San Fernando",
     myServiceId: "srv-cirugia",
-    activeTab: "floor",
-    floorFilter: "all",
-    tasksScope: "all",
-    searchQuery: "",
-    lastNewDayDate: "",
-    navState: {
-      level: "services", // 'services' | 'rooms' | 'beds'
-      selectedServiceId: "srv-cirugia",
-      selectedRoomId: "srv-cirugia-room-1",
-      showAllRoomsBedsInService: false
-    },
+    activeTab: "floor", floorFilter: "all", tasksScope: "all", searchQuery: "", lastNewDayDate: "",
+    navState: { level: "services", selectedServiceId: "srv-cirugia", selectedRoomId: "srv-cirugia-room-1", showAllRoomsBedsInService: false },
     services: [srvCirugia, srvMedicina, srvUti, srvUci, srvTrauma]
   };
 }
