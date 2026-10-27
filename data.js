@@ -358,6 +358,7 @@ function createEmptyPatient() {
     // 9. PLANES POR SISTEMA Y FÁRMACOS ACTIVOS
     systemsPlan: [],
     hospitalMedications: "",
+    clinicalMilestones: [], // <-- NUEVO: Arreglo para Hitos Atemporales
 
     // 10. GESTIÓN INTERNA MEDIPISO (No se exportan a Docs)
     pathogens: [],
@@ -460,6 +461,7 @@ function generateDefaultHospitalState() {
     hospitalName: "Hospital San Fernando",
     myServiceId: "srv-cirugia",
     activeTab: "floor", floorFilter: "all", tasksScope: "all", searchQuery: "", lastNewDayDate: "",
+    history: [], // <-- NUEVO: Contenedor para el historial de 10 días
     navState: { level: "services", selectedServiceId: "srv-cirugia", selectedRoomId: "srv-cirugia-room-1", showAllRoomsBedsInService: false },
     services: [srvCirugia, srvMedicina, srvUti, srvUci, srvTrauma]
   };
