@@ -2376,7 +2376,23 @@ function updateNotificationBadge() {
     badge.classList.toggle("hidden", count === 0);
   }
 }
-
+// Función para pedir permiso de notificaciones al navegador/celular
+function requestBrowserNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert("Tu navegador o dispositivo no soporta notificaciones web.");
+    return;
+  }
+  
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      alert("¡Notificaciones activadas con éxito! Ahora recibirás alertas de tus pendientes.");
+      const btn = document.getElementById("enableBrowserNotifBtn");
+      if (btn) btn.classList.add("hidden");
+    } else {
+      alert("Permiso denegado. Puedes cambiarlo en la configuración de tu navegador.");
+    }
+  });
+}
 // Usando tu función exacta: toggleNotificationDrawer
 function toggleNotificationDrawer() {
   // Asumo que el contenedor se llama notificationDrawer. Si tiene otro id, cámbialo aquí:
@@ -2392,10 +2408,19 @@ function toggleNotificationDrawer() {
 }
 
 function renderNotificationsList() {
-  // Asumo que la lista adentro se llama notificationListContainer.
   const container = document.getElementById("notificationListContainer"); 
   if (!container) return;
   container.innerHTML = "";
+
+  // Ocultar botón si ya hay permiso
+  const enableBtn = document.getElementById("enableBrowserNotifBtn");
+  if (enableBtn) {
+    if ("Notification" in window && Notification.permission === "granted") {
+      enableBtn.classList.add("hidden");
+    } else {
+      enableBtn.classList.remove("hidden");
+    }
+  }
 
   let html = "";
   appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
