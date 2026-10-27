@@ -2795,7 +2795,6 @@ function resetToDemoHospital() {
   renderAll();
   showToast("🔄 Hospital de demostración restaurado");
 }
-
 // =========================================================================
 // 14. TEMA OSCURO, REGISTRO PWA Y ARRANQUE
 // =========================================================================
@@ -2825,13 +2824,11 @@ window.onload = function () {
     document.documentElement.classList.add("dark");
   }
 
-  // Cargar tus catálogos masivos de Sidebar.html para autocompletado
   const atbDatalist = document.getElementById("commonAtbList");
   if (atbDatalist && typeof CATALOGO_FARMACOS !== "undefined") {
     atbDatalist.innerHTML = CATALOGO_FARMACOS.map(a => `<option value="${escapeHtml(a)}"></option>`).join("");
   }
 
-  // Registrar Service Worker para PWA instalable y offline
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW no registrado:", err));
   }
@@ -2839,7 +2836,6 @@ window.onload = function () {
   loadAppState();
   renderAll();
 
-  // Revisar alertas horarias cada 30 segundos
   setInterval(evaluateNotificationsAndBell, 30000);
 };
 
@@ -2849,7 +2845,6 @@ window.onload = function () {
 async function sendPatientToDocsFromModal() {
   if (!currentEditingRef) return;
   
-  // Guardar copia antes de cerrar
   const ref = { ...currentEditingRef };
   saveBedModal(); 
   
@@ -2857,7 +2852,6 @@ async function sendPatientToDocsFromModal() {
   if (!found || !found.bed || !found.bed.patient) return;
   const p = found.bed.patient;
 
-  // 1. Pedir link del doc
   let targetDocId = localStorage.getItem("medipiso_doc_id");
   if (!targetDocId) {
     let docLink = prompt("Primera configuración:\nPega aquí el enlace de tu documento de Google Docs:");
@@ -2867,7 +2861,6 @@ async function sendPatientToDocsFromModal() {
     localStorage.setItem("medipiso_doc_id", targetDocId);
   }
 
-  // 2. Pedir firma
   let savedFirma = localStorage.getItem("medipiso_firma") || "INT. ";
   const firma = prompt("Firma responsable\nDebe iniciar con DR., DRA. o INT. para que el Sidebar pueda leerla.\n\n*Para cambiar documento, escribe: CAMBIAR DOC", savedFirma);
   if (firma === null) return; 
@@ -2878,10 +2871,8 @@ async function sendPatientToDocsFromModal() {
   }
   localStorage.setItem("medipiso_firma", firma.toUpperCase());
 
-  // 3. CONSTRUCCIÓN DEL FORMATO ESTRICTO (COMPATIBLE CON REGEX DEL SIDEBAR)
   let evoText = "";
   
-  // Bloque Identificación y Antecedentes
   evoText += `NOMBRE: ${p.name || "-"}\n`;
   evoText += `EDAD: ${p.age || "-"}\n`;
   evoText += `RUT: ${p.rut || "-"}\n`;
@@ -2899,7 +2890,6 @@ async function sendPatientToDocsFromModal() {
   evoText += `QUIRÚRGICOS: ${p.surgicalHistory.length ? p.surgicalHistory.join(" / ") : "-"}\n`;
   evoText += `FÁRMACOS: ${p.homeMedications.length ? p.homeMedications.join(" / ") : "-"}\n\n`;
 
-  // Bloque Diagnósticos
   evoText += `DIAGNÓSTICOS:\n`;
   (p.currentSurgeries || []).forEach(cx => {
     evoText += `- CIRUGÍA: ${cx.name} (DPO ${cx.postOpDay})\n`;
@@ -2911,12 +2901,10 @@ async function sendPatientToDocsFromModal() {
   if (!p.currentSurgeries?.length && !p.diagnoses?.length) evoText += `- Sin diagnósticos\n`;
   evoText += `\n`;
 
-  // Bloque Resumen
   evoText += `RESUMEN:\n`;
   evoText += `EVOLUCIÓN SUBJETIVA: ${p.evolution?.subjective || "-"}\n`;
   evoText += `SITUACIÓN ACTUAL: ${p.evolution?.currentStatus || "-"}\n\n`;
 
-  // Bloque CSV y Drenajes
   evoText += `CSV Y DRENAJES:\n`;
   const vit = p.vitals || {};
   let oxig = vit.o2Type === "Ambiental" ? "AMBIENTAL" : `${vit.o2Type} ${vit.o2Liters}`;
@@ -2926,7 +2914,6 @@ async function sendPatientToDocsFromModal() {
   });
   evoText += `\n`;
 
-  // Bloque Examen Físico
   evoText += `EX FÍSICO:\n`;
   const ef = p.physicalExam || {};
   evoText += `- GENERAL: ${ef.general || "-"}\n`;
@@ -2937,7 +2924,6 @@ async function sendPatientToDocsFromModal() {
   evoText += `- EEII: ${ef.lowerLimbs || "-"}\n`;
   evoText += `- NEUROLÓGICO: ${ef.neuro || "-"}\n\n`;
 
-  // Bloque Laboratorio
   if (p.labs && p.labs.length) {
     evoText += `LABORATORIO:\n`;
     p.labs.forEach(lab => {
@@ -2949,7 +2935,6 @@ async function sendPatientToDocsFromModal() {
     evoText += `\n`;
   }
 
-  // Bloque Imágenes
   if (p.images && p.images.length) {
     evoText += `IMÁGENES:\n`;
     p.images.forEach(img => {
@@ -2958,7 +2943,6 @@ async function sendPatientToDocsFromModal() {
     evoText += `\n`;
   }
 
-  // Bloque Problemas y Planes
   evoText += `PROBLEMAS Y PLANES:\n`;
   (p.systemsPlan || []).forEach(sys => {
     evoText += `- ${sys.system}: ${sys.plan}\n`;
@@ -2972,7 +2956,6 @@ async function sendPatientToDocsFromModal() {
     if (pend.length) evoText += `PENDIENTES: ${pend.map(t => `[${t.category}] ${t.text}`).join(" | ")}\n`;
   }
   
-  // La firma corta el Regex
   evoText += `\n${firma.toUpperCase()}\n`;
 
   const payload = {
@@ -2984,7 +2967,6 @@ async function sendPatientToDocsFromModal() {
 
   showToast("☁️ Conectando con Google Docs...", "info");
 
-  // 4. Enviar a Google
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
@@ -2997,6 +2979,10 @@ async function sendPatientToDocsFromModal() {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
   }
 }
+
+// =========================================================================
+// 16. HITOS CLÍNICOS Y GESTIÓN DE EMERGENCIAS (V3.0)
+// =========================================================================
 function addMilestoneToModal() {
   const date = document.getElementById("newMilestoneDate").value;
   const text = document.getElementById("newMilestoneText").value.trim();
@@ -3024,7 +3010,6 @@ function renderModalMilestones() {
     </div>
   `).join("");
 }
-// --- SISTEMAS DE EMERGENCIA Y LIMPIEZA ---
 
 function softResetBeds() {
   if (!confirm("⚠️ ¿Vaciar TODAS las camas?\nSe vaciarán los pacientes, pero se conservarán las configuraciones de salas y los PENDIENTES programados de cada cama.")) return;
