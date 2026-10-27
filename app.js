@@ -1109,6 +1109,12 @@ function renderSummaryView() {
             const p = bed.patient || {};
             const iso = getIsolationMeta(p.isolationType);
             const pending = (p.tasks || []).filter(t => !t.completed);
+            
+            let diagHTML = Array.isArray(p.diagnoses) ? p.diagnoses.map(d => '- ' + d.main).join('<br>') : escapeHtml(p.diagnoses || "-");
+            let planHTML = p.evolution?.subjective ? escapeHtml(p.evolution.subjective + ' ' + p.evolution.currentStatus) : escapeHtml(p.clinicalPlan || "");
+            let labsHTML = (p.labs && p.labs.length) ? escapeHtml(p.labs.map(l => l.exams.map(e => e.name + ' ' + e.value).join(' | ')).join(' / ')) : escapeHtml(p.labsSummary || "");
+            let o2Text = (p.vitals && p.vitals.o2Type && p.vitals.o2Type !== "Ambiental") ? `${p.vitals.o2Type} ${p.vitals.o2Liters}` : (p.oxygenSupport || "Ambiental");
+
             return `
               <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 align-top">
                 <td class="p-3 whitespace-nowrap">
@@ -1124,19 +1130,19 @@ function renderSummaryView() {
                 </td>
                 <td class="p-3">
                   <div class="font-bold text-teal-700">Día ${Number(p.hospDays || 1)} Hosp</div>
-                  ${p.oxygenSupport ? `<div class="text-[11px] text-sky-700">🫁 ${escapeHtml(p.oxygenSupport)}</div>` : ""}
+                  ${o2Text !== "Ambiental" ? `<div class="text-[11px] text-sky-700">🫁 ${escapeHtml(o2Text)}</div>` : ""}
                   ${p.isolationType && p.isolationType !== "none" ? `<span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${iso.badgeClass}">${iso.label}</span>` : ""}
                   ${(p.pathogens || []).map(ag => `<div class="text-[11px] font-semibold text-amber-700">🦠 ${escapeHtml(ag)}</div>`).join("")}
                 </td>
                 <td class="p-3 max-w-xs space-y-1">
-                  <div class="font-semibold whitespace-pre-line">${escapeHtml(p.diagnoses || "-")}</div>
-                  ${p.clinicalPlan ? `<div class="text-slate-600 dark:text-slate-400 whitespace-pre-line"><strong>Plan:</strong> ${escapeHtml(p.clinicalPlan)}</div>` : ""}
-                  ${p.labsSummary ? `<div class="font-mono text-[11px] text-indigo-700 dark:text-indigo-300 whitespace-pre-line"><strong>Labs:</strong> ${escapeHtml(p.labsSummary)}</div>` : ""}
+                  <div class="font-semibold whitespace-pre-line">${diagHTML}</div>
+                  ${planHTML ? `<div class="text-slate-600 dark:text-slate-400 whitespace-pre-line"><strong>Plan:</strong> ${planHTML}</div>` : ""}
+                  ${labsHTML ? `<div class="font-mono text-[11px] text-indigo-700 dark:text-indigo-300 whitespace-pre-line"><strong>Labs:</strong> ${labsHTML}</div>` : ""}
                 </td>
                 <td class="p-3 max-w-xs space-y-1">
                   ${(p.antibiotics || []).map(a => `<div class="font-bold text-cyan-700">💊 ${escapeHtml(a.name)} (${escapeHtml(a.dose)}) D${a.currentDay}/${a.targetDays}</div>`).join("")}
                   ${(p.devices || []).map(d => `<span class="inline-block mr-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold">🔌 ${escapeHtml(d.name)} D${d.days}</span>`).join("")}
-                  ${p.medications ? `<div class="text-[11px] text-slate-500 whitespace-pre-line">${escapeHtml(p.medications)}</div>` : ""}
+                  ${p.hospitalMedications ? `<div class="text-[11px] text-slate-500 whitespace-pre-line">${escapeHtml(p.hospitalMedications)}</div>` : ""}
                 </td>
                 <td class="p-3">
                   ${pending.length ? pending.map(t => `<div class="mb-1">• ${escapeHtml(t.text)} ${formatTaskTimingBadge(t)}</div>`).join("") : `<span class="text-slate-400">Sin pendientes</span>`}
@@ -1159,12 +1165,22 @@ function copySummaryToWhatsApp() {
   const lines = [`🏥 *ENTREGA DE VISITA — ${appState.hospitalName}*`, ""];
   list.forEach(({ service, room, bed }) => {
     const p = bed.patient || {};
+    let o2Text = (p.vitals && p.vitals.o2Type && p.vitals.o2Type !== "Ambiental") ? `${p.vitals.o2Type} ${p.vitals.o2Liters}` : (p.oxygenSupport || "Amb");
+    
     lines.push(`🛏️ *[${service.name} - ${room.name}] ${bed.code}* — *${p.name || "Sin nombre"}* (${p.age ? p.age + "a" : ""}, RUT: ${p.rut || "-"})`);
-    lines.push(`• Día ${p.hospDays || 1} Hosp | O2: ${p.oxygenSupport || "Amb"} ${p.allergies ? `| 🚨 RAM: ${p.allergies}` : ""}`);
-    if (p.diagnoses) lines.push(`• Dg: ${p.diagnoses.replace(/\n/g, " / ")}`);
-    if (p.labsSummary) lines.push(`• Labs: ${p.labsSummary.replace(/\n/g, " | ")}`);
+    lines.push(`• Día ${p.hospDays || 1} Hosp | O2: ${o2Text} ${p.allergies ? `| 🚨 RAM: ${p.allergies}` : ""}`);
+    
+    let dgText = Array.isArray(p.diagnoses) ? p.diagnoses.map(d=>d.main).join(" / ") : (p.diagnoses ? p.diagnoses.replace(/\n/g, " / ") : "");
+    if (dgText) lines.push(`• Dg: ${dgText}`);
+    
+    let labsText = (p.labs && p.labs.length) ? p.labs.map(l => l.exams.map(e => e.name + ' ' + e.value).join(', ')).join(' | ') : (p.labsSummary ? p.labsSummary.replace(/\n/g, " | ") : "");
+    if (labsText) lines.push(`• Labs: ${labsText}`);
+    
     if (p.antibiotics?.length) lines.push(`• ATB: ${p.antibiotics.map(a => `${a.name} D${a.currentDay}/${a.targetDays}`).join(", ")}`);
-    if (p.clinicalPlan) lines.push(`• Plan: ${p.clinicalPlan.replace(/\n/g, " ")}`);
+    
+    let planStr = p.evolution?.subjective ? (p.evolution.subjective + " " + p.evolution.currentStatus) : p.clinicalPlan;
+    if (planStr) lines.push(`• Plan: ${planStr.replace(/\n/g, " ")}`);
+    
     const pend = (p.tasks || []).filter(t => !t.completed);
     if (pend.length) lines.push(`• 📌 Pendientes: ${pend.map(t => t.text).join(" | ")}`);
     lines.push("");
@@ -2426,7 +2442,15 @@ function confirmStartNewDay() {
         if (resetSeen) bed.seenToday = false;
         if (bed.status === "occupied" && bed.patient) {
           const p = bed.patient;
-          if (incHosp) p.hospDays = Number(p.hospDays || 0) + 1;
+          if (incHosp) {
+            p.hospDays = Number(p.hospDays || 0) + 1;
+            // Suma Días Post-Operatorios automáticamente
+            if (Array.isArray(p.currentSurgeries)) {
+              p.currentSurgeries.forEach(cx => {
+                if (!isNaN(cx.postOpDay) && cx.postOpDay !== ">30") cx.postOpDay = String(Number(cx.postOpDay) + 1);
+              });
+            }
+          }
           if (incAtb) {
             (p.antibiotics || []).forEach(a => { a.currentDay = Number(a.currentDay || 0) + 1; });
             (p.devices || []).forEach(d => { d.days = Number(d.days || 0) + 1; });
@@ -2456,15 +2480,12 @@ function generateBedMarkdownDocument(service, room, bed) {
   const p = bed.patient || createEmptyPatient();
   const isoMeta = getIsolationMeta(p.isolationType || "none");
   const activeTasks = (p.tasks || []).filter(t => !t.completed);
+  let o2Text = (p.vitals && p.vitals.o2Type && p.vitals.o2Type !== "Ambiental") ? `${p.vitals.o2Type} ${p.vitals.o2Liters}` : (p.oxygenSupport || "Ambiental");
 
   const payload = {
-    medipisoVersion: "2.0",
-    exportedAt: new Date().toISOString(),
-    originService: service.name,
-    originRoom: room.name,
-    originBed: bed.code,
-    patientServiceId: bed.patientServiceId || service.id,
-    patient: p
+    medipisoVersion: "3.0", exportedAt: new Date().toISOString(),
+    originService: service.name, originRoom: room.name, originBed: bed.code,
+    patientServiceId: bed.patientServiceId || service.id, patient: p
   };
 
   return [
@@ -2474,20 +2495,20 @@ function generateBedMarkdownDocument(service, room, bed) {
     `- **Nombre:** ${p.name || "-"} (${p.age ? p.age + " años" : "-"})`,
     `- **RUT:** ${p.rut || "-"} | **Ficha:** ${p.recordNumber || "-"}`,
     `- **Alergias (RAM):** ${p.allergies || "No conocidas"} | **LET:** ${p.letStatus || "Full"}`,
-    `- **Días Hosp:** Día ${p.hospDays || 1} | **Soporte O₂:** ${p.oxygenSupport || "Ambiental"}`,
+    `- **Días Hosp:** Día ${p.hospDays || 1} | **Soporte O₂:** ${o2Text}`,
     `- **Aislamiento:** ${isoMeta.label} ${(p.pathogens?.length) ? `(${p.pathogens.join(", ")})` : ""}`,
     ``,
     `## 🩺 Diagnósticos`,
-    `${p.diagnoses || "-"}`,
+    ...(Array.isArray(p.diagnoses) ? p.diagnoses.map(d=>`- ${d.main}`) : [`${p.diagnoses || "-"}`]),
     ``,
     `## 📋 Plan Clínico y Laboratorios`,
-    `${p.clinicalPlan || "-"}`,
-    ...(p.labsSummary ? [`\n**Laboratorios:**\n${p.labsSummary}`] : []),
+    `${p.evolution?.subjective ? (p.evolution.subjective + " " + p.evolution.currentStatus) : (p.clinicalPlan || "-")}`,
+    ...((p.labs && p.labs.length) ? [`\n**Laboratorios:**\n${p.labs.map(l => `FECHA ${l.date}:\n` + l.exams.map(e => `- ${e.name}: ${e.value} ${e.unit}`).join('\n')).join('\n')}`] : []),
     ``,
     `## 💊 Antibióticos, Dispositivos y Fármacos`,
     ...(p.antibiotics?.length ? p.antibiotics.map(a => `- **ATB:** ${a.name} (${a.dose}) — D${a.currentDay}/${a.targetDays}`) : [`- Sin ATB`]),
     ...(p.devices?.length ? [`- **Dispositivos:** ${p.devices.map(d => `${d.name} (D${d.days})`).join(", ")}`] : []),
-    ...(p.medications ? [`\n**Indicaciones:**\n${p.medications}`] : []),
+    ...(p.hospitalMedications ? [`\n**Indicaciones:**\n${p.hospitalMedications}`] : []),
     ``,
     `## 📌 Pendientes`,
     ...(activeTasks.length ? activeTasks.map(t => `- [${t.category}] ${t.text}`) : [`- Sin pendientes`]),
