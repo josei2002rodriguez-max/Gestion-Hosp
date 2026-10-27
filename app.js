@@ -2366,7 +2366,10 @@ function deleteRoom(serviceId, roomId) {
 // =========================================================================
 // 12. SISTEMA DE NOTIFICACIONES Y ALERTAS (v3.0 - Nombres Corregidos)
 // =========================================================================
-
+function evaluateNotificationsAndBell() {
+  updateNotificationBadge();
+  // Aquí inyectaremos la lógica del sonido de las alarmas (Punto 4) más adelante
+}
 function updateNotificationBadge() {
   let count = 0;
   appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
