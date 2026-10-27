@@ -1182,7 +1182,172 @@ function copySummaryToWhatsApp() {
   copyTextToClipboard(lines.join("\n"));
   showToast("📲 Resumen copiado para pegar en WhatsApp");
 }
+// =========================================================================
+// 8.5 LÓGICA DE PESTAÑAS, DOM DINÁMICO Y AUTOCOMPLETADO (NUEVO v3.0)
+// =========================================================================
 
+// 1. Navegación de Pestañas del Modal
+function switchBedModalTab(tabId) {
+  // Ocultar todas las pestañas
+  document.querySelectorAll('.bed-modal-tab').forEach(tab => tab.classList.add('hidden'));
+  
+  // Reiniciar diseño de todos los botones de la barra superior
+  const btns = ['btn-tab-ingreso', 'btn-tab-historia', 'btn-tab-clinica', 'btn-tab-gestion'];
+  btns.forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if(btn) btn.className = "px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap transition";
+  });
+
+  // Mostrar la pestaña seleccionada y pintar su botón de activo
+  document.getElementById(tabId).classList.remove('hidden');
+  const activeBtn = document.getElementById('btn-' + tabId);
+  if(activeBtn) activeBtn.className = "px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-teal-600 text-teal-700 dark:text-teal-400 whitespace-nowrap transition";
+}
+
+// 2. Función base para borrar cualquier fila dinámica
+function removeRowElement(btn) {
+  btn.parentElement.remove();
+}
+
+// 3. Ocultar/Mostrar litros de O2
+function toggleModalO2Liters(selectElement) {
+  const input = document.getElementById('v-o2-lit');
+  if (selectElement.value === 'Ambiental') {
+    input.classList.add('hidden');
+    input.value = "";
+  } else {
+    input.classList.remove('hidden');
+  }
+}
+
+// 4. Generadores Dinámicos de Filas (DOM Injection)
+
+// 4.1 Antecedentes Generales (Médicos, Quirúrgicos, Hábitos, Fármacos)
+function addHistoryItem(containerId, datalistId, placeholder, value = "") {
+  const container = document.getElementById(containerId);
+  container.insertAdjacentHTML('beforeend', `
+    <div class="flex items-center gap-1.5 c-history-item relative">
+      <span class="text-slate-400 text-lg leading-none font-bold mt-1">•</span>
+      <input type="text" list="${datalistId}" value="${escapeHtml(value)}" placeholder="${placeholder}" class="w-full px-2 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 dark:bg-slate-900 history-val" />
+      <button type="button" onclick="removeRowElement(this)" class="text-rose-500 hover:text-rose-700 font-bold px-1">✕</button>
+    </div>
+  `);
+}
+
+// 4.2 Cirugías Actuales (Con selector de DPO)
+function addCurrentSurgery(name = "", dpo = "0") {
+  let options = '<option value="0">DPO 0 (Día Cx)</option>';
+  for(let i = 1; i <= 30; i++) options += `<option value="${i}">DPO ${i}</option>`;
+  options += '<option value=">30">DPO >30</option>';
+  
+  document.getElementById('modalCurrentSurgeriesList').insertAdjacentHTML('beforeend', `
+    <div class="flex flex-col sm:flex-row gap-1.5 bg-rose-50/50 dark:bg-rose-950/30 p-2 rounded-lg border border-rose-100 dark:border-rose-900/50 c-surgery-item relative pr-6">
+      <button type="button" onclick="removeRowElement(this)" class="absolute right-1 top-2 text-rose-500 hover:text-rose-700 font-bold px-1">✕</button>
+      <input type="text" list="lista-cirugias" value="${escapeHtml(name)}" placeholder="Cirugía (Ej: Apendicectomía)" class="w-full sm:w-2/3 px-2 py-1.5 rounded-lg text-xs font-semibold border dark:border-slate-700 dark:bg-slate-900 surg-name" />
+      <select class="w-full sm:w-1/3 px-2 py-1.5 rounded-lg text-xs font-bold border dark:border-slate-700 dark:bg-slate-900 surg-dpo">
+        ${options}
+      </select>
+    </div>
+  `);
+  // Autoseleccionar el DPO si viene con valor
+  const selects = document.querySelectorAll('.c-surgery-item .surg-dpo');
+  selects[selects.length - 1].value = dpo;
+}
+
+// 4.3 Diagnósticos y Observaciones
+function addDiagnosis(main = "") {
+  const uniqueId = 'dx-' + Date.now();
+  document.getElementById('modalDiagnosesList').insertAdjacentHTML('beforeend', `
+    <div class="bg-indigo-50/30 dark:bg-indigo-950/20 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 c-diag-item relative">
+      <button type="button" onclick="removeRowElement(this)" class="absolute right-1 top-2 text-rose-500 hover:text-rose-700 font-bold px-2">✕</button>
+      <div class="flex gap-1.5 mb-1.5 pr-6">
+        <span class="text-indigo-600 font-bold mt-1.5">•</span>
+        <input type="text" list="lista-diagnosticos" value="${escapeHtml(main)}" placeholder="Diagnóstico principal" class="w-full px-2 py-1.5 rounded-lg text-sm font-bold border border-indigo-200 dark:border-indigo-700 dark:bg-slate-900 diag-main" />
+      </div>
+      <div id="${uniqueId}-obs" class="space-y-1 pl-4"></div>
+      <button type="button" onclick="addDiagnosisObservation('${uniqueId}')" class="text-[10px] text-indigo-600 font-semibold ml-4 mt-1 hover:underline">+ Añadir observación o complicación</button>
+    </div>
+  `);
+}
+
+function addDiagnosisObservation(containerId, obsValue = "") {
+  document.getElementById(containerId + '-obs').insertAdjacentHTML('beforeend', `
+    <div class="flex items-center gap-1.5 c-diag-obs">
+      <span class="text-slate-400 text-[10px]">↳</span>
+      <input type="text" value="${escapeHtml(obsValue)}" placeholder="Observación..." class="w-full px-2 py-1 rounded text-xs border dark:border-slate-700 dark:bg-slate-800 obs-val" />
+      <button type="button" onclick="removeRowElement(this)" class="text-rose-500 hover:text-rose-700 font-bold px-1">✕</button>
+    </div>
+  `);
+}
+
+// 4.4 Laboratorios con Autocompletado de Unidades
+function addLabBlock(dateVal = "") {
+  const uniqueId = 'lab-' + Date.now();
+  const defaultDate = dateVal || new Date().toISOString().slice(0, 10);
+  document.getElementById('modalLabsContainer').insertAdjacentHTML('beforeend', `
+    <div class="bg-white dark:bg-slate-800/80 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 c-lab-block relative">
+      <button type="button" onclick="removeRowElement(this)" class="absolute right-2 top-2 text-rose-500 hover:text-rose-700 font-bold px-1.5">✕</button>
+      <div class="flex items-center gap-2 mb-2 pr-6">
+        <span class="text-xs font-bold text-emerald-800 dark:text-emerald-400">Fecha del Examen:</span>
+        <input type="date" value="${defaultDate}" class="px-2 py-1 rounded-lg text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-slate-900 lab-date" />
+      </div>
+      <div id="${uniqueId}-rows" class="space-y-1.5"></div>
+      <button type="button" onclick="addLabRow('${uniqueId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold mt-2 border border-emerald-200 hover:bg-emerald-100">+ Añadir Resultado</button>
+    </div>
+  `);
+  if(!dateVal) addLabRow(uniqueId); // Agrega una fila por defecto si es bloque nuevo
+}
+
+function addLabRow(containerId, name="", val="", unit="") {
+  document.getElementById(containerId + '-rows').insertAdjacentHTML('beforeend', `
+    <div class="flex items-center gap-1 c-lab-row">
+      <input type="text" list="lista-examenes" oninput="autoCompletarUnidad(this)" value="${escapeHtml(name)}" placeholder="Examen (Ej: PCR)" class="w-2/5 px-2 py-1.5 rounded-lg text-xs font-semibold border dark:border-slate-700 dark:bg-slate-900 lab-name" />
+      <input type="text" value="${escapeHtml(val)}" placeholder="Valor" class="w-1/4 px-2 py-1.5 rounded-lg text-xs font-bold border dark:border-slate-700 dark:bg-slate-900 lab-val" />
+      <input type="text" value="${escapeHtml(unit)}" placeholder="Unidad" class="w-1/4 px-2 py-1.5 rounded-lg text-xs text-slate-500 border dark:border-slate-700 dark:bg-slate-900 lab-unit" />
+      <button type="button" onclick="removeRowElement(this)" class="w-1/10 text-rose-500 hover:text-rose-700 font-bold px-1 text-center">✕</button>
+    </div>
+  `);
+}
+
+// Esta es la función mágica que usabas en el Sidebar
+function autoCompletarUnidad(inputElement) {
+  const unitInput = inputElement.parentElement.querySelector('.lab-unit');
+  const examName = inputElement.value;
+  if (typeof CATALOGO_EXAMENES !== 'undefined' && CATALOGO_EXAMENES[examName]) {
+    unitInput.value = CATALOGO_EXAMENES[examName];
+  }
+}
+
+// 4.5 Imágenes
+function addImageRecord(name="", date="", desc="") {
+  document.getElementById('modalImagesContainer').insertAdjacentHTML('beforeend', `
+    <div class="bg-white dark:bg-slate-800/80 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 c-img-record relative pr-6">
+      <button type="button" onclick="removeRowElement(this)" class="absolute right-1 top-2 text-rose-500 hover:text-rose-700 font-bold px-1.5">✕</button>
+      <div class="flex flex-col sm:flex-row gap-1.5 mb-1.5">
+        <input type="text" list="lista-imagenes" value="${escapeHtml(name)}" placeholder="Examen (Ej: TAC Abdomen)" class="w-full sm:w-2/3 px-2 py-1.5 rounded-lg text-xs font-semibold border dark:border-slate-700 dark:bg-slate-900 img-name" />
+        <input type="date" value="${date}" class="w-full sm:w-1/3 px-2 py-1.5 rounded-lg text-xs border dark:border-slate-700 dark:bg-slate-900 img-date" />
+      </div>
+      <textarea rows="1" placeholder="Hallazgos y descripción..." class="w-full px-2 py-1.5 rounded-lg text-xs border dark:border-slate-700 dark:bg-slate-900 img-desc">${escapeHtml(desc)}</textarea>
+    </div>
+  `);
+}
+
+// 4.6 Planes por Sistema
+function addSystemPlan(sys="", planText="") {
+  document.getElementById('modalSystemsPlanContainer').insertAdjacentHTML('beforeend', `
+    <div class="flex flex-col gap-1 c-sys-plan relative bg-indigo-50/30 dark:bg-indigo-950/20 p-2 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+      <button type="button" onclick="removeRowElement(this)" class="absolute right-1 top-1 text-rose-500 hover:text-rose-700 font-bold px-1.5">✕</button>
+      <select class="w-3/4 px-2 py-1 rounded text-[11px] font-bold border-none bg-transparent text-indigo-700 dark:text-indigo-400 sys-name">
+        <option value="QUIRÚRGICO">🔪 QUIRÚRGICO</option><option value="ANALGESIA">💊 ANALGESIA</option><option value="SÉPTICO">🦠 SÉPTICO</option><option value="NUTRICIONAL / FLUIDOS">💧 NUTRICIONAL / FLUIDOS</option><option value="METABÓLICO">⚖️ METABÓLICO</option><option value="KINÉSICO/FONOAUDIO">🏃 KINÉSICO/FONOAUDIO</option><option value="CARDIOVASCULAR">❤️ CARDIOVASCULAR</option><option value="RESPIRATORIO">🫁 RESPIRATORIO</option><option value="OTROS">📌 OTROS</option>
+      </select>
+      <textarea rows="1" placeholder="Plan para este sistema..." class="w-full px-2 py-1.5 rounded-lg text-xs border dark:border-slate-700 dark:bg-slate-900 sys-plan">${escapeHtml(planText)}</textarea>
+    </div>
+  `);
+  if (sys) {
+    const selects = document.querySelectorAll('.c-sys-plan .sys-name');
+    selects[selects.length - 1].value = sys;
+  }
+}
 // =========================================================================
 // 9. MODAL DE FICHA CLÍNICA COMPLETA (CON GUARDADO SEGURO AUTOMÁTICO)
 // =========================================================================
