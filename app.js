@@ -2490,21 +2490,19 @@ function confirmStartNewDay() {
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // --- NUEVO: Motor de Historial (Snapshot de 10 Días) ---
+  // --- CAPTURA DE HISTORIAL (10 DÍAS MAX) ---
   if (!Array.isArray(appState.history)) appState.history = [];
   
-  // Guardamos la foto exacta del hospital ANTES de mutar los días
   appState.history.push({
     dateId: Date.now(),
     dateLabel: new Date().toLocaleString("es-CL", { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' }),
-    services: JSON.parse(JSON.stringify(appState.services)) // Clonación profunda
+    services: JSON.parse(JSON.stringify(appState.services))
   });
 
-  // Mantenemos estrictamente los últimos 10 turnos
   if (appState.history.length > 10) {
-    appState.history.shift(); // Elimina el día más antiguo
+    appState.history.shift(); 
   }
-  // -------------------------------------------------------
+  // ------------------------------------------
 
   appState.services.forEach(srv => {
     srv.rooms.forEach(room => {
@@ -2543,7 +2541,6 @@ function confirmStartNewDay() {
   renderAll();
   showToast("☀️ ¡Nuevo Día aplicado y turno respaldado!");
 }
-
 // Compartir Cama (.md / WhatsApp)
 function generateBedMarkdownDocument(service, room, bed) {
   const p = bed.patient || createEmptyPatient();
