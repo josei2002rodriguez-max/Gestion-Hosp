@@ -340,18 +340,20 @@ function doesBedMatchFilterAndSearch(bed, room, service) {
 
   if (appState.searchQuery) {
     const q = appState.searchQuery;
+    // Adaptación a la nueva estructura JSON v3.0
+    let diagText = Array.isArray(p.diagnoses) ? p.diagnoses.map(d => d.main).join(" ") : (p.diagnoses || "");
+    let planText = p.evolution ? (p.evolution.subjective + " " + p.evolution.currentStatus) : (p.clinicalPlan || "");
+    let medText = p.hospitalMedications || p.medications || "";
+
     const haystack = [
-      bed.code, room.name, service.name,
-      p.name, p.rut, p.recordNumber, p.diagnoses, p.clinicalPlan, p.labsSummary, p.allergies,
-      ...(p.pathogens || []),
-      ...(p.antibiotics || []).map(a => a.name),
-      ...(p.tasks || []).map(t => t.text)
+      bed.code, room.name, service.name, p.name, p.rut, p.recordNumber, 
+      diagText, planText, medText, p.allergies,
+      ...(p.pathogens || []), ...(p.antibiotics || []).map(a => a.name), ...(p.tasks || []).map(t => t.text)
     ].join(" ").toLowerCase();
     if (!haystack.includes(q)) return false;
   }
   return true;
 }
-
 // =========================================================================
 // 5. RENDERIZADO DEL MENÚ JERÁRQUICO: SERVICIOS -> SALAS -> CAMAS
 // =========================================================================
@@ -737,7 +739,6 @@ function renderBedCardHTML(service, room, bed) {
     `;
   }
 
-  // Detectar si es ectópico (el servicio dueño del paciente es distinto al servicio físico donde está la cama)
   const ownerSrvId = bed.patientServiceId || service.id;
   const ownerSrvObj = getServiceById(ownerSrvId) || service;
   const isEctopic = ownerSrvId !== service.id;
@@ -746,58 +747,57 @@ function renderBedCardHTML(service, room, bed) {
     ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-200 border border-purple-300">🔄 Ectópico de ${escapeHtml(ownerSrvObj.name)}</span>`
     : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 text-teal-800 dark:bg-teal-950/90 dark:text-teal-300 border border-teal-200 dark:border-teal-800">${escapeHtml(ownerSrvObj.name)}</span>`;
 
-  const firstDiagLine = (p.diagnoses || "Sin diagnóstico registrado").split("\n")[0];
+  // SOLUCIÓN: Extractor inteligente de la primera línea de diagnóstico (v3.0 y v2.0)
+  let firstDiagLine = "Sin diagnóstico registrado";
+  if (Array.isArray(p.diagnoses) && p.diagnoses.length > 0) {
+    firstDiagLine = p.diagnoses[0].main;
+  } else if (typeof p.diagnoses === "string" && p.diagnoses.trim() !== "") {
+    firstDiagLine = p.diagnoses.split("\n")[0];
+  }
+
   const hasAllergy = p.allergies && !/no conocida|ram\s*\(-\)|ninguna|sin alergia/i.test(p.allergies);
   const hasLet = p.letStatus && !/full|sin restricci/i.test(p.letStatus);
+  
+  let o2Text = "Ambiental";
+  if (p.vitals && p.vitals.o2Type && p.vitals.o2Type !== "Ambiental") {
+    o2Text = `${p.vitals.o2Type} ${p.vitals.o2Liters}`;
+  } else if (p.oxygenSupport && p.oxygenSupport !== "Ambiental") {
+    o2Text = p.oxygenSupport;
+  }
 
   return `
     <div onclick="openBedModal('${service.id}', '${room.id}', '${bed.id}')" class="card-hover cursor-pointer rounded-2xl p-3.5 bg-white dark:bg-slate-900 border ${bed.isMyBed ? 'border-indigo-400 dark:border-indigo-600' : 'border-slate-200 dark:border-slate-800'} ${isoMeta.borderClass} shadow-xs flex flex-col justify-between gap-2.5">
       
-      <!-- Top Bar -->
       <div class="flex items-center justify-between gap-1.5">
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold ${bed.isMyBed ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white dark:bg-slate-700'}">
-            ${escapeHtml(bed.code)}
-          </span>
+          <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold ${bed.isMyBed ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white dark:bg-slate-700'}">${escapeHtml(bed.code)}</span>
           ${serviceBadge}
         </div>
-
         <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-          <button onclick="openMovePatientModal('${service.id}', '${room.id}', '${bed.id}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 dark:bg-slate-800 dark:text-slate-300 text-xs font-bold" title="Mover o trasladar paciente de cama">⇄</button>
-          <button onclick="quickToggleMyBed('${service.id}', '${room.id}', '${bed.id}')" class="p-1.5 rounded-lg border text-xs font-bold ${bed.isMyBed ? 'bg-indigo-50 border-indigo-300 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-50 border-slate-200 text-slate-400'}" title="Marcar Mi Cama">★</button>
-          <button onclick="quickToggleSeenToday('${service.id}', '${room.id}', '${bed.id}')" class="px-2 py-1 rounded-lg border text-[11px] font-bold ${bed.seenToday ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}">
-            ${bed.seenToday ? '✓ Visto' : 'Ver'}
-          </button>
+          <button onclick="openMovePatientModal('${service.id}', '${room.id}', '${bed.id}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 dark:bg-slate-800 dark:text-slate-300 text-xs font-bold">⇄</button>
+          <button onclick="quickToggleMyBed('${service.id}', '${room.id}', '${bed.id}')" class="p-1.5 rounded-lg border text-xs font-bold ${bed.isMyBed ? 'bg-indigo-50 border-indigo-300 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-50 border-slate-200 text-slate-400'}">★</button>
+          <button onclick="quickToggleSeenToday('${service.id}', '${room.id}', '${bed.id}')" class="px-2 py-1 rounded-lg border text-[11px] font-bold ${bed.seenToday ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}">${bed.seenToday ? '✓ Visto' : 'Ver'}</button>
         </div>
       </div>
 
-      <!-- Alertas Rojas de Alergias / LET / O2 -->
-      ${(hasAllergy || hasLet || (p.oxygenSupport && p.oxygenSupport !== "Ambiental")) ? `
+      ${(hasAllergy || hasLet || o2Text !== "Ambiental") ? `
         <div class="flex flex-wrap gap-1">
           ${hasAllergy ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-rose-600 text-white">🚨 RAM: ${escapeHtml(p.allergies)}</span>` : ""}
           ${hasLet ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-700 text-white">⚖️ ${escapeHtml(p.letStatus)}</span>` : ""}
-          ${p.oxygenSupport && p.oxygenSupport !== "Ambiental" ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">🫁 ${escapeHtml(p.oxygenSupport)}</span>` : ""}
+          ${o2Text !== "Ambiental" ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">🫁 ${escapeHtml(o2Text)}</span>` : ""}
         </div>
       ` : ""}
 
-      <!-- Aislamiento y Patógenos -->
       ${(p.isolationType && p.isolationType !== "none") || (p.pathogens && p.pathogens.length > 0) ? `
         <div class="p-2 rounded-xl border ${isoMeta.badgeClass} text-xs space-y-1">
           ${p.isolationType && p.isolationType !== "none" ? `<div class="font-extrabold">⚠️ ${isoMeta.label}</div>` : ""}
-          ${p.pathogens && p.pathogens.length > 0 ? `
-            <div class="flex flex-wrap gap-1">
-              ${p.pathogens.map(ag => `<span class="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-semibold text-[10px]">🦠 ${escapeHtml(ag)}</span>`).join("")}
-            </div>
-          ` : ""}
+          ${p.pathogens && p.pathogens.length > 0 ? `<div class="flex flex-wrap gap-1">${p.pathogens.map(ag => `<span class="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-semibold text-[10px]">🦠 ${escapeHtml(ag)}</span>`).join("")}</div>` : ""}
         </div>
       ` : ""}
 
-      <!-- Identificación y Diagnóstico -->
       <div>
         <div class="flex items-baseline justify-between gap-2">
-          <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-tight line-clamp-1">
-            ${escapeHtml(p.name || "Paciente sin nombre")}
-          </h3>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-tight line-clamp-1">${escapeHtml(p.name || "Paciente sin nombre")}</h3>
           <span class="text-xs font-bold text-slate-500 shrink-0">${p.age ? `${escapeHtml(p.age)}a` : ""}</span>
         </div>
         <div class="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500 mt-0.5">
@@ -809,35 +809,24 @@ function renderBedCardHTML(service, room, bed) {
         </p>
       </div>
 
-      <!-- Antibióticos y Dispositivos -->
       ${((p.antibiotics && p.antibiotics.length > 0) || (p.devices && p.devices.length > 0)) ? `
         <div class="flex flex-wrap gap-1">
           ${(p.antibiotics || []).map(atb => {
             const done = Number(atb.currentDay) >= Number(atb.targetDays);
             return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${done ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-cyan-50 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border border-cyan-200'}">💊 ${escapeHtml(atb.name)} D${atb.currentDay}/${atb.targetDays}</span>`;
           }).join("")}
-          ${(p.devices || []).map(dev => `
-            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">🔌 ${escapeHtml(dev.name)} D${dev.days}</span>
-          `).join("")}
+          ${(p.devices || []).map(dev => `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">🔌 ${escapeHtml(dev.name)} D${dev.days}</span>`).join("")}
         </div>
       ` : ""}
 
-      <!-- Footer de Pendientes -->
       <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
         ${activeTasks.length > 0 ? `
           <div class="flex items-center gap-1.5 min-w-0 flex-1">
-            <span class="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-bold text-[10px] shrink-0">
-              📌 ${activeTasks.length}
-            </span>
-            <span class="truncate text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-              ${escapeHtml(activeTasks[0].text)}
-            </span>
+            <span class="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-bold text-[10px] shrink-0">📌 ${activeTasks.length}</span>
+            <span class="truncate text-[11px] text-slate-600 dark:text-slate-300 font-medium">${escapeHtml(activeTasks[0].text)}</span>
           </div>
         ` : `<span class="text-[11px] text-slate-400">Sin pendientes</span>`}
-
-        <button onclick="event.stopPropagation(); openShareModal('${service.id}', '${room.id}', '${bed.id}')" class="p-1 rounded-lg text-slate-400 hover:text-emerald-600 shrink-0" title="Compartir por WhatsApp / .md">
-          📲
-        </button>
+        <button onclick="event.stopPropagation(); openShareModal('${service.id}', '${room.id}', '${bed.id}')" class="p-1 rounded-lg text-slate-400 hover:text-emerald-600 shrink-0">📲</button>
       </div>
     </div>
   `;
