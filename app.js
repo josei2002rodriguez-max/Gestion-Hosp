@@ -1685,13 +1685,19 @@ function toggleModalTaskDaysInput() {
 // 10. GESTIÓN DE PENDIENTES (TAREAS Y ALERTAS) EN MODAL v3.0
 // =========================================================================
 
-// Esta es la función que faltaba y hacía "chocar" la app
 function toggleTaskDaysInput() {
   const t = document.getElementById("modalTaskTiming");
   const d = document.getElementById("modalTaskDays");
+  const h = document.getElementById("modalTaskExactTime");
+  
   if (t && d) {
-    if (t.value === "in_days") d.classList.remove("hidden");
-    else d.classList.add("hidden");
+    if (t.value === "in_days") {
+      d.classList.remove("hidden");
+      if(h) h.classList.add("hidden"); // Ocultamos la hora si es en días
+    } else {
+      d.classList.add("hidden");
+      if(h) h.classList.remove("hidden"); // Mostramos la hora si es hoy o mañana
+    }
   }
 }
 
@@ -1700,6 +1706,7 @@ function addTaskInsideModal() {
   const catEl = document.getElementById("modalTaskCategory");
   const timeEl = document.getElementById("modalTaskTiming");
   const daysEl = document.getElementById("modalTaskDays");
+  const exactTimeEl = document.getElementById("modalTaskExactTime");
 
   const text = textEl.value.trim();
   if (!text) return;
@@ -1710,12 +1717,14 @@ function addTaskInsideModal() {
     category: catEl ? catEl.value : "General",
     timing: timeEl ? timeEl.value : "today",
     completed: false,
-    daysRemaining: (timeEl && timeEl.value === "in_days" && daysEl) ? Number(daysEl.value || 2) : 0
+    daysRemaining: (timeEl && timeEl.value === "in_days" && daysEl) ? Number(daysEl.value || 2) : 0,
+    exactTime: (exactTimeEl && !exactTimeEl.classList.contains('hidden')) ? exactTimeEl.value : ""
   };
 
   modalTempTasks.push(task);
   textEl.value = "";
   if(daysEl) daysEl.value = "";
+  if(exactTimeEl) exactTimeEl.value = "";
   renderModalTasksList();
 }
 
@@ -1738,20 +1747,36 @@ function renderModalTasksList() {
         if (t.timing === "today") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold">Hoy</span>`;
         else if (t.timing === "tomorrow") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-bold">Mañana</span>`;
         else if (t.timing === "in_days") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-bold">En ${t.daysRemaining || 1}d</span>`;
+        
+        // Renderizar la hora si existe
+        if (t.exactTime) timeBadge += ` <span class="px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[9px] font-extrabold flex items-center gap-0.5">🕒 ${t.exactTime}</span>`;
     }
 
     container.insertAdjacentHTML('beforeend', `
       <div class="flex items-center justify-between p-2 mb-1.5 border border-slate-200 dark:border-slate-700 rounded-lg ${bg}">
-        <div class="flex items-center gap-2 overflow-hidden">
+        <div class="flex items-center gap-2 overflow-hidden flex-1 pr-2">
           <input type="checkbox" ${t.completed ? "checked" : ""} onchange="toggleModalTask(${i})" class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer shrink-0">
           <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">${escapeHtml(t.category)}</span>
           <span class="text-xs truncate ${textDeco}">${escapeHtml(t.text)}</span>
-          ${timeBadge}
         </div>
-        <button type="button" onclick="deleteModalTask(${i})" class="text-rose-400 hover:text-rose-600 font-bold px-2 py-0.5 shrink-0">✕</button>
+        <div class="flex items-center gap-1.5 shrink-0">
+          ${timeBadge}
+          <button type="button" onclick="deleteModalTask(${i})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 py-0.5">✕</button>
+        </div>
       </div>
     `);
   });
+}
+
+function formatTaskTimingBadge(t) {
+  if (t.completed) return "";
+  let b = "";
+  if (t.timing === "today") b = "[Hoy]";
+  else if (t.timing === "tomorrow") b = "[Mañana]";
+  else if (t.timing === "in_days") b = `[En ${t.daysRemaining}d]`;
+  
+  if (t.exactTime) b += ` 🕒 ${t.exactTime}`;
+  return b;
 }
 
 function toggleModalTask(index) {
