@@ -2608,24 +2608,38 @@ function handleImportFileUpload(event) {
 }
 
 function parseIncomingMarkdownPreview() {
-  const raw = document.getElementById("importMarkdownInput").value;
+  const raw = document.getElementById("importMarkdownInput").value.trim();
   const box = document.getElementById("importDetectedPreviewBox");
   const summary = document.getElementById("importDetectedSummary");
-  if (!raw || !raw.trim()) {
+  if (!raw) {
     box.classList.add("hidden");
     parsedImportPatientData = null;
     return;
   }
 
   let parsed = null;
-  const jsonMatch = raw.match(/MEDIPISO_JSON_START\s*([\s\S]*?)\s*MEDIPISO_JSON_END/);
-  if (jsonMatch && jsonMatch[1]) {
-    try { parsed = JSON.parse(jsonMatch[1].trim()); } catch (e) {}
+
+  // 1. Intentar parsear como JSON PURO (Nuevo formato de Docs v3.0)
+  if (raw.startsWith("{")) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      console.warn("No es un JSON válido, intentando Markdown...");
+    }
   }
 
+  // 2. Si no es JSON puro, buscar el bloque antiguo MEDIPISO_JSON_START (Retrocompatibilidad)
+  if (!parsed) {
+    const jsonMatch = raw.match(/MEDIPISO_JSON_START\s*([\s\S]*?)\s*MEDIPISO_JSON_END/);
+    if (jsonMatch && jsonMatch[1]) {
+      try { parsed = JSON.parse(jsonMatch[1].trim()); } catch (e) {}
+    }
+  }
+
+  // 3. Si todo falla, intentar leer el nombre a la fuerza
   if (!parsed || !parsed.patient) {
     const p = createEmptyPatient();
-    const mName = raw.match(/\*\*Nombre:\*\*\s*([^\(\n]+)/i);
+    const mName = raw.match(/\*\*Nombre:\*\*\s*([^\(\n]+)/i) || raw.match(/NOMBRE:\s*([^\n]+)/i);
     p.name = mName ? mName[1].trim() : "Paciente Importado";
     parsed = { patient: p };
   }
