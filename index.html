@@ -868,6 +868,39 @@
         </div>
       </div>
     </div>
+    <!-- Panel de Emergencias y Time Travel -->
+<div class="bg-rose-50/50 dark:bg-rose-950/20 p-4 rounded-2xl border border-rose-200 dark:border-rose-800 space-y-3 mt-4">
+  <h4 class="text-xs font-extrabold uppercase tracking-wider text-rose-800 dark:text-rose-300">⚠️ Gestión de Memoria y Emergencias</h4>
+  
+  <div class="flex flex-col gap-3">
+    <!-- Soft Reset -->
+    <div class="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-rose-100 dark:border-rose-900/50">
+      <div>
+        <strong class="text-xs text-slate-800 dark:text-white block">Limpieza de Turno (Soft Reset)</strong>
+        <span class="text-[10px] text-slate-500 block leading-tight mt-0.5">Vacía los pacientes, pero CONSERVA los pendientes.</span>
+      </div>
+      <button type="button" onclick="softResetBeds()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 shrink-0">Limpiar Camas</button>
+    </div>
+
+    <!-- Máquina del Tiempo -->
+    <div class="bg-white dark:bg-slate-900 p-3 rounded-xl border border-rose-100 dark:border-rose-900/50">
+      <strong class="text-xs text-slate-800 dark:text-white block mb-2">⏱️ Máquina del Tiempo (Últimos 10 días)</strong>
+      <div class="flex gap-2">
+        <select id="historyRestoreSelect" class="w-full px-2 py-1.5 rounded-lg text-xs font-semibold border dark:bg-slate-800 dark:border-slate-700"></select>
+        <button type="button" onclick="restoreFromHistory()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shrink-0 shadow-sm">Restaurar</button>
+      </div>
+    </div>
+
+    <!-- Hard Reset -->
+    <div class="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-rose-100 dark:border-rose-900/50">
+      <div>
+        <strong class="text-xs text-slate-800 dark:text-white block">Borrado de Fábrica (Hard Reset)</strong>
+        <span class="text-[10px] text-slate-500 block leading-tight mt-0.5">Elimina TODO el hospital. Irreversible.</span>
+      </div>
+      <button type="button" onclick="hardResetApp()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0 shadow-sm">Borrar Todo</button>
+    </div>
+  </div>
+</div>
   </div>
 
   <!-- =========================================================================
