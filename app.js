@@ -2358,114 +2358,82 @@ function deleteRoom(serviceId, roomId) {
 }
 
 // =========================================================================
-// 12. CENTRO DE NOTIFICACIONES Y RECORDATORIOS ACTIVOS
+// 12. SISTEMA DE NOTIFICACIONES Y ALERTAS (v3.0 - Nombres Corregidos)
 // =========================================================================
-function toggleNotificationDrawer() {
-  const drawer = document.getElementById("notificationDrawer");
-  drawer.classList.toggle("hidden");
-  evaluateNotificationsAndBell();
-}
 
-function requestBrowserNotificationPermission() {
-  if (!("Notification" in window)) {
-    showToast("Tu navegador no soporta notificaciones del sistema", "warning");
-    return;
-  }
-  Notification.requestPermission().then(perm => {
-    if (perm === "granted") {
-      showToast("🔔 Notificaciones del dispositivo activadas");
-      document.getElementById("enableBrowserNotifBtn").textContent = "✓ Avisos Activos";
+function updateNotificationBadge() {
+  let count = 0;
+  appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
+    if (b.status === "occupied" && b.patient && b.patient.tasks) {
+      count += b.patient.tasks.filter(t => !t.completed).length;
     }
-  });
-}
-
-function evaluateNotificationsAndBell() {
-  const alerts = [];
-  const now = new Date();
-  const currentHHMM = now.toTimeString().slice(0, 5);
-
-  appState.services.forEach(service => {
-    service.rooms.forEach(room => {
-      room.beds.forEach(bed => {
-        if (bed.status !== "occupied" || !bed.patient) return;
-        const p = bed.patient;
-
-        // 1. Pendientes de hoy, vencidos o con hora alcanzada
-        (p.tasks || []).forEach(t => {
-          if (t.completed) return;
-          const isDueToday = t.timing === "today" || t.timing === "later" || Number(t.daysRemaining) <= 0;
-          const isTimeReached = t.dueTime && t.dueTime <= currentHHMM;
-
-          if (isDueToday) {
-            alerts.push({
-              type: isTimeReached ? "time_alert" : "task_today",
-              title: `${service.name} • ${bed.code} (${p.name || "Paciente"})`,
-              subtitle: `📌 ${t.text} ${t.dueTime ? `(⏰ ${t.dueTime})` : ""}`,
-              serviceId: service.id,
-              roomId: room.id,
-              bedId: bed.id
-            });
-
-            if (isTimeReached && !t.notified) {
-              t.notified = true;
-              triggerDeviceNotification(`⏰ Pendiente en ${bed.code} (${service.name})`, `${p.name}: ${t.text}`);
-              saveAppState();
-            }
-          }
-        });
-
-        // 2. Antibióticos que cumplieron su meta de días
-        (p.antibiotics || []).forEach(atb => {
-          if (Number(atb.currentDay) >= Number(atb.targetDays)) {
-            alerts.push({
-              type: "atb_target",
-              title: `${service.name} • ${bed.code} (${p.name || "Paciente"})`,
-              subtitle: `💊 ${atb.name} cumplió Día ${atb.currentDay}/${atb.targetDays}`,
-              serviceId: service.id,
-              roomId: room.id,
-              bedId: bed.id
-            });
-          }
-        });
-      });
-    });
-  });
-
+  })));
+  
+  // Usando tu ID exacto: notifBellBadge
   const badge = document.getElementById("notifBellBadge");
-  if (alerts.length > 0) {
-    badge.textContent = alerts.length;
-    badge.classList.remove("hidden");
-  } else {
-    badge.classList.add("hidden");
-  }
-
-  const listEl = document.getElementById("notificationListContainer");
-  if (!listEl) return;
-  if (alerts.length === 0) {
-    listEl.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">No tienes alertas ni pendientes vencidos en este momento.</p>`;
-  } else {
-    listEl.innerHTML = alerts.map(a => `
-      <div onclick="openBedModal('${a.serviceId}', '${a.roomId}', '${a.bedId}'); toggleNotificationDrawer();" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition">
-        <div class="text-xs font-extrabold text-teal-700 dark:text-teal-400">${escapeHtml(a.title)}</div>
-        <div class="text-xs text-slate-700 dark:text-slate-200 mt-0.5">${escapeHtml(a.subtitle)}</div>
-      </div>
-    `).join("");
+  if (badge) {
+    badge.textContent = count;
+    badge.classList.toggle("hidden", count === 0);
   }
 }
 
-function triggerDeviceNotification(title, body) {
-  showToast(`${title} — ${body}`, "info");
-  if ("Notification" in window && Notification.permission === "granted") {
-    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification(title, { body, vibrate: [200, 100, 200] });
-      }).catch(() => new Notification(title, { body }));
-    } else {
-      new Notification(title, { body });
+// Usando tu función exacta: toggleNotificationDrawer
+function toggleNotificationDrawer() {
+  // Asumo que el contenedor se llama notificationDrawer. Si tiene otro id, cámbialo aquí:
+  const drop = document.getElementById("notificationDrawer"); 
+  if (!drop) return;
+  
+  if (drop.classList.contains("hidden")) {
+    renderNotificationsList();
+    drop.classList.remove("hidden");
+  } else {
+    drop.classList.add("hidden");
+  }
+}
+
+function renderNotificationsList() {
+  // Asumo que la lista adentro se llama notificationListContainer.
+  const container = document.getElementById("notificationListContainer"); 
+  if (!container) return;
+  container.innerHTML = "";
+
+  let html = "";
+  appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
+    if (b.status === "occupied" && b.patient && b.patient.tasks) {
+      const pendings = b.patient.tasks.filter(t => !t.completed);
+      
+      pendings.forEach(t => {
+        let timeBadge = "";
+        if (t.timing === "today") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">Hoy</span>`;
+        else if (t.timing === "tomorrow") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">Mañana</span>`;
+        else if (t.timing === "in_days") timeBadge = `<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">En ${t.daysRemaining || 1}d</span>`;
+
+        if (t.exactTime) timeBadge += ` <span class="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold flex items-center gap-1">🕒 ${t.exactTime}</span>`;
+
+        html += `
+          <div class="p-3 border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer transition" onclick="toggleNotificationDrawer(); openBedModal('${s.id}', '${r.id}', '${b.id}')">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <span class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded shadow-sm bg-teal-600 text-white text-[10px]">${b.code}</span>
+                ${escapeHtml(b.patient.name || "Paciente sin nombre")}
+              </span>
+              <div class="flex items-center text-[10px] gap-1">${timeBadge}</div>
+            </div>
+            <div class="text-[11px] text-slate-600 dark:text-slate-300">
+              <span class="font-extrabold text-indigo-600 dark:text-indigo-400">[${escapeHtml(t.category)}]</span> ${escapeHtml(t.text)}
+            </div>
+          </div>
+        `;
+      });
     }
-  }
-}
+  })));
 
+  if (!html) {
+    html = `<div class="p-6 text-center text-xs font-semibold text-slate-500 italic flex flex-col items-center gap-2"><span class="text-2xl">☕</span>No hay pendientes registrados en todo el servicio.</div>`;
+  }
+  
+  container.innerHTML = html;
+}
 // =========================================================================
 // 13. NUEVO DÍA, EXPORTACIÓN/IMPORTACIÓN (.MD, WHATSAPP Y .JSON)
 // =========================================================================
