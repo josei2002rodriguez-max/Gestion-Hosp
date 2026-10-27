@@ -196,6 +196,11 @@
           <button onclick="switchMainTab('summary')" id="tabBtn-summary" class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
             <span>📋 Resumen y Entrega</span>
           </button>
+          
+        <!-- NUEVO BOTÓN AQUÍ -->
+          <button onclick="openAssignBedsModal()" class="ml-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 flex items-center gap-2 transition hover:bg-indigo-100">
+            <span>➕ Asignar Mis Camas</span>
+          </button>
         </div>
 
         <!-- Search & Filter Controls -->
@@ -1093,6 +1098,35 @@
             </div>
           </div>
         </div>
+  <!-- =========================================================================
+       MODAL 8: ASIGNADOR DE MIS CAMAS (WIZARD DE TURNO)
+  ========================================================================== -->
+  <div id="assignBedsModalBackdrop" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 no-print">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh]">
+      
+      <!-- Encabezado Fijo -->
+      <div class="px-5 py-4 bg-indigo-600 text-white flex items-center justify-between shrink-0">
+        <div>
+          <h3 class="text-base font-bold">⭐ Planificar Mi Pase de Visita</h3>
+          <p class="text-xs text-indigo-100">Selecciona los pacientes que tienes a cargo hoy.</p>
+        </div>
+        <button onclick="closeAssignBedsModal()" class="p-1 rounded-lg hover:bg-white/20">✕</button>
+      </div>
+      
+      <!-- Contenedor Dinámico con Scroll -->
+      <div id="assignBedsModalBody" class="p-0 overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 relative"></div>
+
+      <!-- Pie Fijo con Botones -->
+      <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-between gap-3 shrink-0">
+        <button onclick="closeAssignBedsModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700">Cancelar</button>
+        <button onclick="confirmAssignBeds()" class="px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex-1">
+          💾 Asignarme estas camas
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
