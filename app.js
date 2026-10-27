@@ -2077,12 +2077,12 @@ function openHospitalConfigModal() {
 
   resetServiceForm();
   renderConfigServicesList();
+  renderHistorySelect(); // <-- NUEVO: Llena las fechas guardadas
 
   const backdrop = document.getElementById("hospitalConfigModalBackdrop");
   backdrop.classList.remove("hidden");
   backdrop.classList.add("flex");
 }
-
 function closeHospitalConfigModal() {
   const backdrop = document.getElementById("hospitalConfigModalBackdrop");
   backdrop.classList.add("hidden");
@@ -3023,4 +3023,62 @@ function renderModalMilestones() {
       <button type="button" onclick="removeMilestone(${idx})" class="text-rose-500 hover:text-rose-700 font-bold px-1.5">✕</button>
     </div>
   `).join("");
+}
+// --- SISTEMAS DE EMERGENCIA Y LIMPIEZA ---
+
+function softResetBeds() {
+  if (!confirm("⚠️ ¿Vaciar TODAS las camas?\nSe vaciarán los pacientes, pero se conservarán las configuraciones de salas y los PENDIENTES programados de cada cama.")) return;
+  
+  appState.services.forEach(srv => {
+    srv.rooms.forEach(room => {
+      room.beds.forEach(bed => {
+        if (bed.status === "occupied" && bed.patient) {
+          const savedTasks = Array.isArray(bed.patient.tasks) ? [...bed.patient.tasks] : [];
+          bed.patient = createEmptyPatient();
+          bed.patient.tasks = savedTasks;
+          bed.status = "free";
+          bed.isMyBed = false;
+          bed.seenToday = false;
+        }
+      });
+    });
+  });
+  
+  saveAppState();
+  renderAll();
+  closeHospitalConfigModal();
+  showToast("🧹 Camas limpiadas exitosamente. Pendientes conservados.");
+}
+
+function hardResetApp() {
+  if (!confirm("🚨 PELIGRO: Eliminarás absolutamente TODO el hospital. Esta acción es IRREVERSIBLE.\n\n¿Estás seguro?")) return;
+  localStorage.removeItem(STORAGE_KEY_V2);
+  location.reload();
+}
+
+function renderHistorySelect() {
+  const sel = document.getElementById("historyRestoreSelect");
+  if (!sel) return;
+  if (!appState.history || appState.history.length === 0) {
+    sel.innerHTML = `<option value="">No hay respaldos disponibles</option>`;
+    return;
+  }
+  sel.innerHTML = [...appState.history].reverse().map(h => 
+    `<option value="${h.dateId}">Restaurar turno del: ${h.dateLabel}</option>`
+  ).join("");
+}
+
+function restoreFromHistory() {
+  const idStr = document.getElementById("historyRestoreSelect").value;
+  if (!idStr) return;
+  const snapshot = appState.history.find(h => h.dateId === Number(idStr));
+  if (!snapshot) return;
+
+  if (!confirm(`¿Sobrescribir el estado actual con el turno del ${snapshot.dateLabel}?\n\nLos cambios de hoy se perderán.`)) return;
+
+  appState.services = JSON.parse(JSON.stringify(snapshot.services));
+  saveAppState();
+  renderAll();
+  closeHospitalConfigModal();
+  showToast(`⏱️ Hospital restaurado al ${snapshot.dateLabel}`);
 }
