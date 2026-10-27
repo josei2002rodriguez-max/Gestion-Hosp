@@ -2651,23 +2651,40 @@ function parseIncomingMarkdownPreview() {
 
 function confirmPatientImport() {
   if (!parsedImportPatientData) parseIncomingMarkdownPreview();
-  if (!parsedImportPatientData?.patient) {
-    showToast("Pega primero un mensaje o archivo .md válido", "warning");
+  if (!parsedImportPatientData || !parsedImportPatientData.patient) {
+    showToast("Pega primero un JSON o archivo .md válido", "warning");
     return;
   }
-  const [serviceId, roomId, bedId] = document.getElementById("importTargetBedSelect").value.split("|");
+  
+  // 1. Obtiene la cama exacta que seleccionaste en el menú desplegable
+  const bedSelectValue = document.getElementById("importTargetBedSelect").value;
+  if (!bedSelectValue) return;
+  
+  const [serviceId, roomId, bedId] = bedSelectValue.split("|");
   const found = findEntity(serviceId, roomId, bedId);
-  if (!found?.bed) return;
+  if (!found || !found.bed) return;
 
+  // 2. Si la cama estaba ocupada, avisa que se va a sobrescribir
+  if (found.bed.status === "occupied") {
+    if (!confirm(`La ${found.bed.code} ya está ocupada por ${found.bed.patient?.name || "otro paciente"}. ¿Deseas sobrescribirlo con los datos importados?`)) {
+      return;
+    }
+  }
+
+  // 3. Asigna los datos a la cama seleccionada fusionando con la estructura v3.0 vacía
   found.bed.status = "occupied";
   found.bed.isMyBed = document.getElementById("importMarkAsMyBed").checked;
   found.bed.seenToday = false;
-  found.bed.patient = { ...createEmptyPatient(), ...parsedImportPatientData.patient };
+  
+  // Clonación profunda de la estructura base + los datos importados
+  const emptyPatient = createEmptyPatient();
+  found.bed.patient = Object.assign({}, emptyPatient, parsedImportPatientData.patient);
 
   saveAppState();
   closeImportModal();
   renderAll();
-  showToast(`📥 Paciente importado en ${found.service.name} • ${found.bed.code}`);
+  
+  showToast(`📥 Paciente importado con éxito en ${found.service.name} • ${found.bed.code}`);
 }
 
 // Respaldo Completo JSON (Exportar y Restaurar)
