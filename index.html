@@ -155,11 +155,15 @@
             <span id="notifBellBadge" class="hidden absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-rose-600 text-white shadow">0</span>
           </button>
 
-<div id="notificationDrawer" class="hidden fixed right-2 sm:right-6 top-16 w-80 sm:w-[400px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[100] max-h-[60vh] overflow-y-auto overscroll-contain transition-all">            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10 shadow-md">
+<div id="notificationDrawer" class="hidden fixed right-2 sm:right-6 top-16 w-80 sm:w-[400px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[100] max-h-[60vh] overflow-y-auto overscroll-contain transition-all">            
+          <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10 shadow-md">
               <span class="text-xs font-extrabold uppercase tracking-wider">🔔 Alertas</span>
-              <button onclick="requestBrowserNotificationPermission()" id="enableBrowserNotifBtn" class="text-[11px] px-2 py-0.5 rounded bg-teal-600 hover:bg-teal-500 font-semibold transition">
-                Activar avisos
-              </button>
+              <div class="flex items-center gap-2">
+                <button onclick="requestBrowserNotificationPermission()" id="enableBrowserNotifBtn" class="text-[11px] px-2 py-0.5 rounded bg-teal-600 hover:bg-teal-500 font-semibold transition">
+                  Activar avisos
+                </button>
+                <button onclick="toggleNotificationDrawer()" class="p-1 px-2 rounded-lg hover:bg-white/20 text-white font-bold" title="Cerrar">✕</button>
+              </div>
             </div>
             <div id="notificationListContainer" class="divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1"></div>
         </div>
