@@ -1688,16 +1688,10 @@ function toggleModalTaskDaysInput() {
 function toggleTaskDaysInput() {
   const t = document.getElementById("modalTaskTiming");
   const d = document.getElementById("modalTaskDays");
-  const h = document.getElementById("modalTaskExactTime");
-  
+  // Ya no ocultamos la hora, dejamos que el usuario siempre pueda poner una hora exacta.
   if (t && d) {
-    if (t.value === "in_days") {
-      d.classList.remove("hidden");
-      if(h) h.classList.add("hidden"); // Ocultamos la hora si es en días
-    } else {
-      d.classList.add("hidden");
-      if(h) h.classList.remove("hidden"); // Mostramos la hora si es hoy o mañana
-    }
+    if (t.value === "in_days") d.classList.remove("hidden");
+    else d.classList.add("hidden");
   }
 }
 
@@ -1714,14 +1708,16 @@ function addTaskInsideModal() {
   const task = {
     id: "tsk_" + Date.now(),
     text: text,
-    category: catEl ? catEl.value : "General",
+    category: catEl ? catEl.value : "📌 General",
     timing: timeEl ? timeEl.value : "today",
     completed: false,
     daysRemaining: (timeEl && timeEl.value === "in_days" && daysEl) ? Number(daysEl.value || 2) : 0,
-    exactTime: (exactTimeEl && !exactTimeEl.classList.contains('hidden')) ? exactTimeEl.value : ""
+    exactTime: (exactTimeEl && exactTimeEl.value) ? exactTimeEl.value : "" // Captura blindada de la hora
   };
 
   modalTempTasks.push(task);
+  
+  // Limpiar campos
   textEl.value = "";
   if(daysEl) daysEl.value = "";
   if(exactTimeEl) exactTimeEl.value = "";
