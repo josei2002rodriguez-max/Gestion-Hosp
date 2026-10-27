@@ -3235,3 +3235,133 @@ function confirmAssignBeds() {
   renderAll();
   showToast(`✅ Visita configurada: Tienes ${assignedCount} paciente(s) a tu cargo hoy.`);
 }
+// =========================================================================
+// WIZARD: EXPORTACIÓN MASIVA A GOOGLE DOCS (FASE 1)
+// =========================================================================
+
+let tempBulkExportBeds = new Set();
+
+function openBulkExportModal() {
+  tempBulkExportBeds.clear();
+  
+  // Preseleccionar automáticamente solo "Mis Camas" que estén ocupadas
+  appState.services.forEach(s => s.rooms.forEach(r => r.beds.forEach(b => {
+    if (b.status === "occupied" && b.isMyBed) tempBulkExportBeds.add(`${s.id}|${r.id}|${b.id}`);
+  })));
+  
+  renderBulkExportModal();
+  document.getElementById("bulkExportModalBackdrop").classList.remove("hidden");
+  document.getElementById("bulkExportModalBackdrop").classList.add("flex");
+}
+
+function closeBulkExportModal() {
+  document.getElementById("bulkExportModalBackdrop").classList.add("hidden");
+  document.getElementById("bulkExportModalBackdrop").classList.remove("flex");
+}
+
+function toggleTempBulkExportBed(bedKey) {
+  if (tempBulkExportBeds.has(bedKey)) tempBulkExportBeds.delete(bedKey);
+  else tempBulkExportBeds.add(bedKey);
+  renderBulkExportModal();
+}
+
+function renderBulkExportModal() {
+  const body = document.getElementById("bulkExportModalBody");
+  const btnConfirm = document.getElementById("btnConfirmBulk");
+  
+  let myBedsHtml = "";
+  let otherBedsHtml = "";
+  
+  appState.services.forEach(srv => srv.rooms.forEach(room => room.beds.forEach(bed => {
+    if (bed.status !== "occupied") return;
+    
+    const bedKey = `${srv.id}|${room.id}|${bed.id}`;
+    const isChecked = tempBulkExportBeds.has(bedKey);
+    const pName = bed.patient?.name || "Paciente sin nombre";
+    
+    const cardHtml = `
+      <label class="flex items-center gap-3 p-2.5 rounded-xl border ${isChecked ? 'bg-sky-50 border-sky-400 dark:bg-sky-900/30 dark:border-sky-600 ring-1 ring-sky-400' : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700'} cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80 transition mb-2">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTempBulkExportBed('${bedKey}')" class="w-5 h-5 rounded text-sky-600 border-slate-300 focus:ring-sky-500 bg-white">
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded shadow-sm bg-slate-200 dark:bg-slate-700 text-[10px]">${escapeHtml(bed.code)}</span>
+            <span class="truncate">${escapeHtml(pName)}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Servicio: ${escapeHtml(srv.name)}</div>
+        </div>
+      </label>
+    `;
+    
+    if (bed.isMyBed) myBedsHtml += cardHtml;
+    else otherBedsHtml += cardHtml;
+  })));
+
+  let finalHtml = "";
+  if (myBedsHtml) finalHtml += `<h4 class="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 mb-2 uppercase">⭐ Mis Camas</h4>${myBedsHtml}`;
+  if (otherBedsHtml) finalHtml += `<h4 class="text-xs font-extrabold text-slate-500 dark:text-slate-400 mb-2 mt-4 uppercase">🔄 Otras Camas Ocupadas</h4>${otherBedsHtml}`;
+  
+  if (!finalHtml) finalHtml = `<div class="text-center text-slate-500 text-xs py-8">No hay camas ocupadas en el hospital.</div>`;
+  
+  body.innerHTML = finalHtml;
+  btnConfirm.innerHTML = `🚀 Enviar (${tempBulkExportBeds.size}) a Docs`;
+  btnConfirm.disabled = tempBulkExportBeds.size === 0;
+}
+
+async function confirmBulkExport() {
+  if (tempBulkExportBeds.size === 0) return;
+  
+  let targetDocId = localStorage.getItem("medipiso_doc_id");
+  if (!targetDocId) {
+    let docLink = prompt("Primera configuración:\nPega aquí el enlace de tu documento de Google Docs:");
+    if (!docLink) return;
+    let match = docLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    targetDocId = match ? match[1] : docLink.trim();
+    localStorage.setItem("medipiso_doc_id", targetDocId);
+  }
+
+  // 1. ARMAMOS LA "CAJA" (EL PAYLOAD)
+  const exportList = [];
+  tempBulkExportBeds.forEach(bedKey => {
+    const [serviceId, roomId, bedId] = bedKey.split("|");
+    const found = findEntity(serviceId, roomId, bedId);
+    if (found && found.bed && found.bed.patient) {
+      exportList.push({
+        camaCode: found.bed.code,
+        servicio: found.service.name,
+        patientData: found.bed.patient // Mandamos el JSON completo del paciente
+      });
+    }
+  });
+
+  const payload = {
+    docId: targetDocId,
+    action: "BATCH_EXPORT",
+    patients: exportList
+  };
+
+  const btnConfirm = document.getElementById("btnConfirmBulk");
+  btnConfirm.innerHTML = `⏳ Enviando...`;
+  btnConfirm.disabled = true;
+
+  // 2. LLAMAMOS AL "CARTERO" (EL FETCH)
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    
+    if (result.status === "success") {
+      showToast(`✅ Lote de ${tempBulkExportBeds.size} pacientes enviado a la Sala de Espera de Docs`, "success");
+      closeBulkExportModal();
+    } else {
+      showToast("❌ Error Google: " + result.message, "danger");
+      btnConfirm.innerHTML = `🚀 Reintentar`;
+      btnConfirm.disabled = false;
+    }
+  } catch (error) {
+    showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
+    btnConfirm.innerHTML = `🚀 Reintentar`;
+    btnConfirm.disabled = false;
+  }
+}
