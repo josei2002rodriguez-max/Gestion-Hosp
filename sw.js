@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medipiso-v2-cache-v1';
+const CACHE_NAME = 'medipiso-v2-cache-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
