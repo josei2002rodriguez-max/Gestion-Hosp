@@ -2979,7 +2979,6 @@ async function sendPatientToDocsFromModal() {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
   }
 }
-
 // =========================================================================
 // 16. HITOS CLÍNICOS Y GESTIÓN DE EMERGENCIAS (V3.0)
 // =========================================================================
@@ -3011,6 +3010,7 @@ function renderModalMilestones() {
   `).join("");
 }
 
+// --- SISTEMAS DE EMERGENCIA Y LIMPIEZA ---
 function softResetBeds() {
   if (!confirm("⚠️ ¿Vaciar TODAS las camas?\nSe vaciarán los pacientes, pero se conservarán las configuraciones de salas y los PENDIENTES programados de cada cama.")) return;
   
