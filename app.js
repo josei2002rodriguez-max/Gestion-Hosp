@@ -14,6 +14,7 @@ let modalTempPathogens = [];
 let modalTempAtbs = [];
 let modalTempDevices = [];
 let modalTempTasks = [];
+let modalTempMilestones = [];
 let parsedImportPatientData = null;
 let deferredPwaPrompt = null;
 
@@ -1484,6 +1485,10 @@ function openBedModal(serviceId, roomId, bedId) {
   renderModalTasksList();
 
   // Resetear a la pestaña 1
+  modalTempMilestones = Array.isArray(p.clinicalMilestones) ? [...p.clinicalMilestones] : [];
+  document.getElementById("newMilestoneDate").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("newMilestoneText").value = "";
+  renderModalMilestones();
   switchBedModalTab('tab-ingreso');
 
   const backdrop = document.getElementById("bedModalBackdrop");
@@ -1894,6 +1899,7 @@ function saveBedModal() {
     })).filter(sys => sys.plan),
 
     hospitalMedications: document.getElementById("fieldMedications").value.trim(),
+    clinicalMilestones: [...modalTempMilestones],
 
     // Vectores dinámicos conservados
     pathogens: [...modalTempPathogens],
@@ -2990,4 +2996,31 @@ async function sendPatientToDocsFromModal() {
   } catch (error) {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
   }
+}
+function addMilestoneToModal() {
+  const date = document.getElementById("newMilestoneDate").value;
+  const text = document.getElementById("newMilestoneText").value.trim();
+  if (!text) return;
+  modalTempMilestones.push({ date: date || new Date().toISOString().slice(0, 10), text });
+  document.getElementById("newMilestoneText").value = "";
+  renderModalMilestones();
+}
+
+function removeMilestone(idx) {
+  modalTempMilestones.splice(idx, 1);
+  renderModalMilestones();
+}
+
+function renderModalMilestones() {
+  const container = document.getElementById("modalMilestonesList");
+  if (!modalTempMilestones.length) {
+    container.innerHTML = `<p class="text-[11px] text-slate-500">Sin hitos registrados.</p>`;
+    return;
+  }
+  container.innerHTML = modalTempMilestones.map((m, idx) => `
+    <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800 border border-amber-100 dark:border-amber-900/50">
+      <div class="text-xs"><strong class="text-amber-700 dark:text-amber-400">${m.date}</strong> — ${escapeHtml(m.text)}</div>
+      <button type="button" onclick="removeMilestone(${idx})" class="text-rose-500 hover:text-rose-700 font-bold px-1.5">✕</button>
+    </div>
+  `).join("");
 }
