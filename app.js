@@ -1,9 +1,10 @@
 // =========================================================================
-// MEDIPISO v2.0 — MOTOR PRINCIPAL (JERARQUÍA, NUMERACIÓN 1..N, TRASLADOS Y PWA)
+// MEDIPISO v3.0 — MOTOR PRINCIPAL (JERARQUÍA, NUMERACIÓN 1..N, TRASLADOS Y PWA)
 // =========================================================================
 
 const STORAGE_KEY_V2 = "medipiso_hospital_state_v2";
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw835FNK9Qqkj4F6YRHOmeYvvPumvUqlZfM-hvpMrkFR32YQbGVVmyShVQM5kmFaNw/exec";let appState = null;
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFhxL8Fq9RH0hfOHRFiK4jRqd3o89a2vGLCoDurU0alzpeEQk0X8XcQiKYgX-GTiE/exec";
+let appState = null;
 let currentEditingRef = null; // { serviceId, roomId, bedId }
 let currentShareRef = null;   // { serviceId, roomId, bedId }
 let currentMoveOriginRef = null; // { serviceId, roomId, bedId }
