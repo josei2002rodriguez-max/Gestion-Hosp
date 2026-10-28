@@ -1014,7 +1014,7 @@ function handleQuickTaskSubmit(e) {
   if (!found.bed.patient) found.bed.patient = createEmptyPatient();
   if (!Array.isArray(found.bed.patient.tasks)) found.bed.patient.tasks = [];
 
-  found.bed.patient.tasks.push({
+  const newTask = {
     id: "task-" + Date.now(),
     category,
     text,
@@ -1023,7 +1023,19 @@ function handleQuickTaskSubmit(e) {
     dueTime,
     completed: false,
     notified: false
-  });
+  };
+
+  found.bed.patient.tasks.push(newTask);
+
+  // 👇 AQUÍ SE CONECTA LA ALARMA EN SEGUNDO PLANO 👇
+  if (newTask.dueTime) {
+    programarAlarmaAndroid(
+      newTask.id, 
+      `Alarma: Cama ${found.bed.code}`, 
+      `[${newTask.category}] ${newTask.text}`, 
+      newTask.dueTime
+    );
+  }
 
   document.getElementById("quickTaskText").value = "";
   document.getElementById("quickTaskDueTime").value = "";
