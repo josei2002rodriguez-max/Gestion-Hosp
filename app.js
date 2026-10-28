@@ -3,7 +3,7 @@
 // =========================================================================
 
 const STORAGE_KEY_V2 = "medipiso_hospital_state_v2";
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9C93D6VbkD-ncua9wqCFnibCKlgOQvAZt9bkP44mhLX87hbFPeabXSwz2qV_bH-Rk/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfPM60FWSB8gf5-gARjm5udvlPQucYm2g7rTjz_zlab_UhjNIcWqoIsAlBbPPKwgBz/exec";
 
 let appState = null;
 let currentEditingRef = null; // { serviceId, roomId, bedId }
