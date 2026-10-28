@@ -1019,11 +1019,11 @@
       <div class="p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Paso 1: Sube el archivo `.md` o pega el texto de WhatsApp</label>
-            <label class="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200 cursor-pointer">
-              <span>📂 Cargar archivo .md</span>
-              <input type="file" accept=".md,.txt" onchange="handleImportFileUpload(event)" class="hidden" />
-            </label>
+            <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Paso 1: Sube el archivo (.md o .json) o pega el texto</label>
+          <label class="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200 cursor-pointer">
+            <span>📂 Cargar archivo</span>
+            <input type="file" accept=".md,.txt,.json,application/json" onchange="handleImportFileUpload(event)" class="hidden" />
+          </label>
           </div>
           <textarea id="importMarkdownInput" rows="5" oninput="parseIncomingMarkdownPreview()" placeholder="Pega aquí el mensaje de WhatsApp o contenido .md..." class="w-full p-3 rounded-xl text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
         </div>
