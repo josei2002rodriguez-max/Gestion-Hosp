@@ -2639,6 +2639,8 @@ function copyShareMarkdownToClipboard() {
 function openImportPatientModal() {
   document.getElementById("importMarkdownInput").value = "";
   document.getElementById("importDetectedPreviewBox").classList.add("hidden");
+  document.getElementById("importSingleBedContainer").classList.remove("hidden");
+  document.getElementById("importBatchBedsContainer").classList.add("hidden");
   parsedImportPatientData = null;
 
   const select = document.getElementById("importTargetBedSelect");
@@ -2679,35 +2681,23 @@ function parseIncomingMarkdownPreview() {
   const raw = document.getElementById("importMarkdownInput").value.trim();
   const box = document.getElementById("importDetectedPreviewBox");
   const summary = document.getElementById("importDetectedSummary");
-  const bedSelect = document.getElementById("importTargetBedSelect");
 
   if (!raw) {
     box.classList.add("hidden");
     parsedImportPatientData = null;
-    if (bedSelect) bedSelect.disabled = false;
     return;
   }
 
   let parsed = null;
-
-  // 1. Intentar parsear como JSON PURO (Nuevo formato V3.0)
   if (raw.startsWith("{")) {
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      console.warn("No es un JSON válido, intentando Markdown...");
-    }
+    try { parsed = JSON.parse(raw); } catch (e) { console.warn("No es JSON puro."); }
   }
-
-  // 2. Retrocompatibilidad para archivos individuales .md
   if (!parsed) {
     const jsonMatch = raw.match(/MEDIPISO_JSON_START\s*([\s\S]*?)\s*MEDIPISO_JSON_END/);
     if (jsonMatch && jsonMatch[1]) {
       try { parsed = JSON.parse(jsonMatch[1].trim()); } catch (e) {}
     }
   }
-
-  // 3. Fallback de emergencia
   if (!parsed || (!parsed.patient && parsed.type !== "batch_import")) {
     const p = createEmptyPatient();
     const mName = raw.match(/\*\*Nombre:\*\*\s*([^\(\n]+)/i) || raw.match(/NOMBRE:\s*([^\n]+)/i);
@@ -2719,98 +2709,99 @@ function parseIncomingMarkdownPreview() {
   box.classList.remove("hidden");
 
   // === DETECCIÓN VISUAL: ¿ES UN LOTE O UNO SOLO? ===
+  const singleContainer = document.getElementById("importSingleBedContainer");
+  const batchContainer = document.getElementById("importBatchBedsContainer");
+
   if (parsed.type === "batch_import" && Array.isArray(parsed.patientsList)) {
-    // Es un lote masivo
-    summary.innerHTML = `<strong class="text-indigo-700 dark:text-indigo-400">📦 LOTE MASIVO DETECTADO: ${parsed.patientsList.length} PACIENTES</strong><br><span class="text-[11px] text-emerald-700 dark:text-emerald-400">El sistema buscará las camas por nombre (Ej: "Cama 1") y hará el reparto automático.</span>`;
-    
-    // Bloquear selección manual de cama porque será automático
-    if (bedSelect) {
-      bedSelect.disabled = true;
-      bedSelect.innerHTML = `<option>🔄 Asignación automática por código de cama</option>`;
-    }
+    // ES UN LOTE
+    summary.innerHTML = `<strong class="text-indigo-700 dark:text-indigo-400">📦 LOTE MASIVO: ${parsed.patientsList.length} PACIENTES</strong><br><span class="text-[11px] text-emerald-700 dark:text-emerald-400">El sistema sugiere camas. Ajusta el servicio si hay camas con el mismo nombre.</span>`;
+    singleContainer.classList.add("hidden");
+    batchContainer.classList.remove("hidden");
+
+    // Generar opciones base para los selects individuales del lote
+    let baseOptions = `<option value="">❌ No importar (Omitir)</option>`;
+    appState.services.forEach(srv => {
+      srv.rooms.forEach(room => {
+        room.beds.forEach(bed => {
+          const st = bed.status === "free" ? "🟢" : `🔴`;
+          // Usamos data-bedcode para autoseleccionar la sugerencia
+          baseOptions += `<option value="${srv.id}|${room.id}|${bed.id}" data-bedcode="${bed.code.toUpperCase()}">${st} [${escapeHtml(srv.name)}] ${escapeHtml(bed.code)}</option>`;
+        });
+      });
+    });
+
+    let batchHtml = "";
+    parsed.patientsList.forEach((item, index) => {
+      const code = item.originBedCode || "";
+      batchHtml += `
+        <div class="p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
+           <div class="text-xs font-bold mb-1 truncate text-slate-800 dark:text-slate-200">👤 ${escapeHtml(item.patient?.name || "Desconocido")} <span class="text-[10px] text-slate-500 font-normal">(Sugerencia: ${escapeHtml(code)})</span></div>
+           <select class="batch-bed-select w-full px-2 py-1.5 rounded text-xs font-semibold border border-teal-300 dark:border-teal-700 dark:bg-slate-800" data-index="${index}" data-suggest="${code.toUpperCase()}">
+             ${baseOptions}
+           </select>
+        </div>
+      `;
+    });
+    document.getElementById("importBatchList").innerHTML = batchHtml;
+
+    // Auto-seleccionar la mejor opción
+    document.querySelectorAll(".batch-bed-select").forEach(sel => {
+       const suggest = sel.getAttribute("data-suggest");
+       if (suggest) {
+          // Busca la primera cama libre con ese nombre, o si no hay libres, la ocupada.
+          const match = Array.from(sel.options).find(opt => opt.getAttribute("data-bedcode") === suggest);
+          if (match) sel.value = match.value;
+       }
+    });
+
   } else if (parsed.patient) {
-    // Es un paciente individual
+    // ES UNO SOLO
     summary.innerHTML = `<strong>${escapeHtml(parsed.patient.name)}</strong> — RUT: ${escapeHtml(parsed.patient.rut || "-")}`;
-    if (bedSelect) {
-      bedSelect.disabled = false;
-      // Re-popular las camas si se había bloqueado antes (simulando un clic rápido)
-      const ev = new Event('change');
-      document.getElementById("importMarkdownInput").dispatchEvent(ev);
-    }
+    singleContainer.classList.remove("hidden");
+    batchContainer.classList.add("hidden");
   }
 }
 
 function confirmPatientImport() {
-  if (!parsedImportPatientData) parseIncomingMarkdownPreview();
-  
   if (!parsedImportPatientData) {
     showToast("Pega primero un JSON o archivo válido", "warning");
     return;
   }
-
   const isMyBedFlag = document.getElementById("importMarkAsMyBed").checked;
 
-  // =========================================================
-  // FLUJO A: REPARTO AUTOMÁTICO DE LOTE MASIVO (BATCH IMPORT)
-  // =========================================================
+  // === FLUJO A: LOTE MASIVO ===
   if (parsedImportPatientData.type === "batch_import" && Array.isArray(parsedImportPatientData.patientsList)) {
     let asignados = 0;
-    let fallidos = [];
-
-    parsedImportPatientData.patientsList.forEach(item => {
-      const codigoCama = item.originBedCode; // Ej: "Cama 1" o "CAMA 1"
-      const pData = item.patient;
-      if (!codigoCama || !pData || !pData.name) return;
-
-      // Buscar la cama de destino en todo el hospital comparando el código
-      let targetBed = null;
-      appState.services.forEach(srv => {
-        srv.rooms.forEach(room => {
-          room.beds.forEach(bed => {
-            if (bed.code.trim().toUpperCase() === codigoCama.trim().toUpperCase()) {
-              targetBed = bed;
-            }
-          });
-        });
-      });
-
-      if (targetBed) {
-        targetBed.status = "occupied";
-        targetBed.isMyBed = isMyBedFlag;
-        targetBed.seenToday = false;
-        targetBed.patient = Object.assign({}, createEmptyPatient(), pData);
+    const selects = document.querySelectorAll(".batch-bed-select");
+    
+    selects.forEach(sel => {
+      const val = sel.value;
+      if (!val) return; // Se omitió a este paciente (❌ No importar)
+      
+      const index = sel.getAttribute("data-index");
+      const pData = parsedImportPatientData.patientsList[index].patient;
+      const [serviceId, roomId, bedId] = val.split("|");
+      
+      const found = findEntity(serviceId, roomId, bedId);
+      if (found && found.bed) {
+        found.bed.status = "occupied";
+        found.bed.isMyBed = isMyBedFlag;
+        found.bed.seenToday = false;
+        found.bed.patient = Object.assign({}, createEmptyPatient(), pData);
         asignados++;
-      } else {
-        fallidos.push(`[${codigoCama}] ${pData.name}`);
       }
     });
 
     saveAppState();
     closeImportModal();
     renderAll();
-
-    // Mensaje de resumen de la operación
-    let msg = `✅ Lote procesado: Se importaron ${asignados} pacientes a sus camas.`;
-    if (fallidos.length > 0) {
-      msg += `\n\n⚠️ No se encontró la cama origen para estos ${fallidos.length} pacientes:\n${fallidos.join("\n")}`;
-    }
-    alert(msg);
-    return; // Fin del flujo de lote
-  }
-
-  // =========================================================
-  // FLUJO B: IMPORTACIÓN DE UN SOLO PACIENTE (ORIGINAL)
-  // =========================================================
-  if (!parsedImportPatientData.patient) {
-    showToast("Formato inválido. No se detectó información del paciente.", "warning");
+    alert(`✅ Lote procesado: ${asignados} pacientes importados correctamente a sus camas.`);
     return;
   }
 
+  // === FLUJO B: UN SOLO PACIENTE ===
   const bedSelectValue = document.getElementById("importTargetBedSelect").value;
-  if (!bedSelectValue || bedSelectValue.startsWith("🔄")) {
-    showToast("Por favor selecciona una cama destino válida", "warning");
-    return; 
-  }
+  if (!bedSelectValue) return; 
   
   const [serviceId, roomId, bedId] = bedSelectValue.split("|");
   const found = findEntity(serviceId, roomId, bedId);
@@ -2825,9 +2816,7 @@ function confirmPatientImport() {
   found.bed.status = "occupied";
   found.bed.isMyBed = isMyBedFlag;
   found.bed.seenToday = false;
-  
-  const emptyPatient = createEmptyPatient();
-  found.bed.patient = Object.assign({}, emptyPatient, parsedImportPatientData.patient);
+  found.bed.patient = Object.assign({}, createEmptyPatient(), parsedImportPatientData.patient);
 
   saveAppState();
   closeImportModal();
