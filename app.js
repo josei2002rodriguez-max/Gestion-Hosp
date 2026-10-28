@@ -1717,11 +1717,21 @@ function addTaskInsideModal() {
     timing: timeEl ? timeEl.value : "today",
     completed: false,
     daysRemaining: (timeEl && timeEl.value === "in_days" && daysEl) ? Number(daysEl.value || 2) : 0,
-    exactTime: (exactTimeEl && exactTimeEl.value) ? exactTimeEl.value : "" // Captura blindada de la hora
+    exactTime: (exactTimeEl && exactTimeEl.value) ? exactTimeEl.value : "" 
   };
 
   modalTempTasks.push(task);
-  
+
+  // 👇 AQUÍ SE CONECTA LA ALARMA EN SEGUNDO PLANO 👇
+  if (task.exactTime) {
+    programarAlarmaAndroid(
+      task.id, 
+      "Pendiente Médico 🚨", 
+      `[${task.category}] ${task.text}`, 
+      task.exactTime
+    );
+  }
+
   // Limpiar campos
   textEl.value = "";
   if(daysEl) daysEl.value = "";
@@ -3433,5 +3443,41 @@ async function confirmBulkExport() {
     showToast("❌ Error de red: No se pudo contactar a Google Drive", "danger");
     btnConfirm.innerHTML = `🚀 Reintentar`;
     btnConfirm.disabled = false;
+  }
+}
+async function programarAlarmaAndroid(idTarea, titulo, mensaje, horaExacta) {
+  // 1. Verificamos si el navegador soporta Service Workers y Notificaciones
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+  
+  // 2. Calculamos el Timestamp exacto
+  // Asumiendo que "horaExacta" viene en formato "14:30" para el día de hoy
+  const ahora = new Date();
+  const [horas, minutos] = horaExacta.split(":");
+  const fechaAlarma = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), horas, minutos, 0);
+  
+  // Si la hora ya pasó hoy, la programamos para mañana
+  if (fechaAlarma.getTime() < ahora.getTime()) {
+    fechaAlarma.setDate(fechaAlarma.getDate() + 1);
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    
+    // 3. Verificamos si la API de Triggers está habilitada en este Android
+    if ('showTrigger' in Notification.prototype) {
+      registration.showNotification(titulo, {
+        tag: idTarea, // El tag evita notificaciones duplicadas
+        body: mensaje,
+        icon: './icon.png', // Ruta a tu logo
+        vibrate: [200, 100, 200, 100, 200],
+        requireInteraction: true, // Queda en pantalla hasta que la toques
+        showTrigger: new TimestampTrigger(fechaAlarma.getTime()) // 👈 LA MAGIA ESTÁ AQUÍ
+      });
+      console.log(`✅ Alarma de Android programada en segundo plano para las ${horaExacta}`);
+    } else {
+      console.warn("Este dispositivo no soporta Notification Triggers API en segundo plano.");
+    }
+  } catch (error) {
+    console.error("Error al programar alarma en segundo plano:", error);
   }
 }
